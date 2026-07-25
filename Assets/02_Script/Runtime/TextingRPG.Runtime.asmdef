@@ -2,14 +2,15 @@
     "name": "TextingRPG.Runtime",
     "rootNamespace": "TextingRPG",
     "references": [
-        "Unity.Plugin.NewtonsoftJson",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

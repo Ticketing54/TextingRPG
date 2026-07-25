@@ -4,6 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using TextingRPG.Core;
+using UnityEngine;
 using UnityEngine.Networking;
 
 // BuildRequestBody is intentionally `internal` (see brief); the EditMode test assembly
@@ -47,6 +48,7 @@ namespace TextingRPG.LLM
             request.SetRequestHeader("content-type", "application/json");
             request.SetRequestHeader("x-api-key", _apiKey);
             request.SetRequestHeader("anthropic-version", AnthropicVersion);
+            request.timeout = 30;
 
             request.SendWebRequest().completed += _ =>
             {
@@ -54,7 +56,10 @@ namespace TextingRPG.LLM
                 {
                     if (request.result != UnityWebRequest.Result.Success)
                     {
-                        if (retriesLeft > 0)
+                        // Only retry transient connection failures. Protocol errors (HTTP 4xx/5xx,
+                        // e.g. 400 bad request or 429 rate limit) will fail identically on retry —
+                        // or actively make a 429 worse — so don't retry those.
+                        if (retriesLeft > 0 && request.result == UnityWebRequest.Result.ConnectionError)
                         {
                             SendMessageWithRetry(context, onSuccess, onError, retriesLeft - 1);
                             return;
@@ -81,13 +86,24 @@ namespace TextingRPG.LLM
         internal string BuildRequestBody(ConversationContext context)
         {
             var messages = new JArray();
+            string lastEmittedRole = null;
             foreach (var message in context.History)
             {
+                var role = message.Sender == ChatSender.Player ? "user" : "assistant";
+                if (role == lastEmittedRole)
+                {
+                    // Defensive: the Anthropic API rejects two consecutive messages with the
+                    // same role. Callers are expected to keep history alternating, but skip
+                    // any entry that would violate that instead of sending an invalid request.
+                    continue;
+                }
+
                 messages.Add(new JObject
                 {
-                    ["role"] = message.Sender == ChatSender.Player ? "user" : "assistant",
+                    ["role"] = role,
                     ["content"] = message.Text
                 });
+                lastEmittedRole = role;
             }
 
             var effectSchema = new JObject
@@ -147,9 +163,15 @@ namespace TextingRPG.LLM
                     }
 
                     var input = block["input"];
+                    var reply = (string)input["reply"];
+                    if (string.IsNullOrEmpty(reply))
+                    {
+                        throw new Exception("Claude tool_use response had a null or empty 'reply' field.");
+                    }
+
                     var response = new LLMResponse
                     {
-                        Reply = (string)input["reply"],
+                        Reply = reply,
                         Effects = new System.Collections.Generic.List<LLMEffect>()
                     };
 
@@ -158,12 +180,21 @@ namespace TextingRPG.LLM
                     {
                         foreach (var effectToken in effectsToken)
                         {
-                            response.Effects.Add(new LLMEffect
+                            try
                             {
-                                Type = (string)effectToken["type"],
-                                Target = (string)effectToken["target"],
-                                Delta = (float)effectToken["delta"]
-                            });
+                                response.Effects.Add(new LLMEffect
+                                {
+                                    Type = (string)effectToken["type"],
+                                    Target = (string)effectToken["target"],
+                                    Delta = (float)effectToken["delta"]
+                                });
+                            }
+                            catch (Exception e)
+                            {
+                                // A single malformed effect entry shouldn't discard an otherwise
+                                // valid reply and the rest of the effects — skip just this one.
+                                Debug.LogWarning($"ClaudeProvider: skipping malformed effect entry: {e.Message}");
+                            }
                         }
                     }
 

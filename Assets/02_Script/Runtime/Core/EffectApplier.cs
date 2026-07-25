@@ -21,6 +21,11 @@ namespace TextingRPG.Core
                         state.SetRelationship(npcId, current + Mathf.RoundToInt(clampedDelta));
                         break;
 
+                    // KNOWN GAP: unlike "relationship" (which always uses the controller's own
+                    // npcId and ignores effect.Target), this branch lets the LLM write to any
+                    // effect.Target string as a stat key with no whitelist. Currently inert
+                    // (nothing reads PlayerState stats yet), but this must be closed with a
+                    // canonical stat-id whitelist before Plan 2 (combat) starts reading stats.
                     case "stat":
                         float currentStat = state.GetStat(effect.Target);
                         state.SetStat(effect.Target, currentStat + clampedDelta);

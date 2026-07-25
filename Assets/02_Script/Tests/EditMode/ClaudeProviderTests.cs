@@ -48,6 +48,50 @@ namespace TextingRPG.Tests
         }
 
         [Test]
+        public void ParseResponse_EmptyReply_Throws()
+        {
+            const string emptyReplyResponse = @"{
+                ""content"": [
+                    {
+                        ""type"": ""tool_use"",
+                        ""name"": ""npc_reply"",
+                        ""input"": { ""reply"": """", ""effects"": [] }
+                    }
+                ]
+            }";
+
+            Assert.Throws<System.Exception>(() => ClaudeProvider.ParseResponse(emptyReplyResponse));
+        }
+
+        [Test]
+        public void ParseResponse_OneMalformedEffectAmongValidOnes_SkipsBadEffectKeepsReplyAndValidEffects()
+        {
+            const string mixedEffectsResponse = @"{
+                ""content"": [
+                    {
+                        ""type"": ""tool_use"",
+                        ""name"": ""npc_reply"",
+                        ""input"": {
+                            ""reply"": ""좋은 하루 되세요!"",
+                            ""effects"": [
+                                { ""type"": ""relationship"", ""target"": ""npc_a"", ""delta"": 1.0 },
+                                { ""type"": ""stat"", ""target"": ""courage"" },
+                                { ""type"": ""relationship"", ""target"": ""npc_a"", ""delta"": 2.0 }
+                            ]
+                        }
+                    }
+                ]
+            }";
+
+            var response = ClaudeProvider.ParseResponse(mixedEffectsResponse);
+
+            Assert.AreEqual("좋은 하루 되세요!", response.Reply);
+            Assert.AreEqual(2, response.Effects.Count);
+            Assert.AreEqual(1.0f, response.Effects[0].Delta);
+            Assert.AreEqual(2.0f, response.Effects[1].Delta);
+        }
+
+        [Test]
         public void BuildRequestBody_IncludesModelSystemPromptAndForcedToolChoice()
         {
             var provider = new ClaudeProvider("fake-key", "claude-test-model");
@@ -72,6 +116,34 @@ namespace TextingRPG.Tests
             Assert.AreEqual(2, messages.Count);
             Assert.AreEqual("user", (string)messages[0]["role"]);
             Assert.AreEqual("assistant", (string)messages[1]["role"]);
+        }
+
+        [Test]
+        public void BuildRequestBody_SkipsConsecutiveSameRoleMessages()
+        {
+            var provider = new ClaudeProvider("fake-key", "claude-test-model");
+            var context = new ConversationContext
+            {
+                SystemPrompt = "system",
+                History = new List<ChatMessage>
+                {
+                    new ChatMessage(ChatSender.Player, "first", "t1"),
+                    new ChatMessage(ChatSender.Player, "second (dangling after an error)", "t2"),
+                    new ChatMessage(ChatSender.Npc, "reply", "t3")
+                }
+            };
+
+            var bodyJson = provider.BuildRequestBody(context);
+            var body = JObject.Parse(bodyJson);
+            var messages = (JArray)body["messages"];
+
+            string previousRole = null;
+            foreach (var message in messages)
+            {
+                var role = (string)message["role"];
+                Assert.AreNotEqual(previousRole, role, "no two adjacent messages should share the same role");
+                previousRole = role;
+            }
         }
     }
 }

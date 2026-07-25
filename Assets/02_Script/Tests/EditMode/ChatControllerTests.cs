@@ -60,7 +60,7 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void SendPlayerMessage_OnProviderError_FiresOnErrorAndDoesNotAppendNpcMessage()
+        public void SendPlayerMessage_OnProviderError_FiresOnErrorAndRollsBackPlayerMessageFromHistory()
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextError = "network down" };
@@ -72,7 +72,9 @@ namespace TextingRPG.Tests
             controller.SendPlayerMessage("안녕하세요");
 
             Assert.AreEqual("network down", capturedError);
-            Assert.AreEqual(1, state.GetHistory("npc_a").Count); // only the player's message
+            // History is rolled back on error so the next send starts clean (no dangling
+            // player message that would otherwise create two consecutive Player entries).
+            Assert.AreEqual(0, state.GetHistory("npc_a").Count);
         }
 
         [Test]

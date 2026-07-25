@@ -43,6 +43,7 @@ namespace TextingRPG.UI
             }
 
             _inputField.text = string.Empty;
+            _sendButton.interactable = false;
             _controller.SendPlayerMessage(text);
         }
 
@@ -50,6 +51,11 @@ namespace TextingRPG.UI
         {
             var view = Instantiate(_messagePrefab, _messageContainer);
             view.Bind(message);
+
+            if (message.Sender == ChatSender.Npc)
+            {
+                _sendButton.interactable = true;
+            }
         }
 
         private void HandleError(string error)
@@ -59,6 +65,15 @@ namespace TextingRPG.UI
                 _errorText.text = $"오류: {error}";
             }
             Debug.LogWarning($"ChatUIView: {error}");
+            _sendButton.interactable = true;
+        }
+
+        public void ShowError(string message)
+        {
+            if (_errorText != null)
+            {
+                _errorText.text = message;
+            }
         }
     }
 }

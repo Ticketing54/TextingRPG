@@ -4,8 +4,7 @@
     "references": [
         "TextingRPG.Runtime",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
-        "Unity.Plugin.NewtonsoftJson"
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

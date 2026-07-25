@@ -43,7 +43,11 @@ namespace TextingRPG.UI
                     EffectApplier.Apply(_playerState, _npcId, response.Effects);
                     OnMessageAdded?.Invoke(npcMessage);
                 },
-                onError: error => OnError?.Invoke(error)
+                onError: error =>
+                {
+                    _playerState.GetHistory(_npcId).Remove(playerMessage);
+                    OnError?.Invoke(error);
+                }
             );
         }
     }

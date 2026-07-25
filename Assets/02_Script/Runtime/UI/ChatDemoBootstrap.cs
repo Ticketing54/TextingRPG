@@ -15,10 +15,27 @@ namespace TextingRPG.UI
 
         private void Start()
         {
+            if (_npc == null)
+            {
+                Debug.LogError("ChatDemoBootstrap: _npc가 할당되어 있지 않습니다.");
+                if (_chatUIView != null)
+                {
+                    _chatUIView.ShowError("NPC 설정이 누락되었습니다.");
+                }
+                return;
+            }
+
+            if (_chatUIView == null)
+            {
+                Debug.LogError("ChatDemoBootstrap: _chatUIView가 할당되어 있지 않습니다.");
+                return;
+            }
+
             var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
             if (string.IsNullOrEmpty(apiKey))
             {
                 Debug.LogError("ANTHROPIC_API_KEY 환경변수가 설정되어 있지 않습니다.");
+                _chatUIView.ShowError("오류: ANTHROPIC_API_KEY 환경변수가 설정되어 있지 않습니다.");
                 return;
             }
 

@@ -51,6 +51,23 @@ namespace TextingRPG.Tests
         }
 
         [Test]
+        public void Apply_RelationshipEffect_IgnoresEffectTargetAndAlwaysUsesCallersNpcId()
+        {
+            var state = new PlayerState();
+            var effects = new List<LLMEffect>
+            {
+                // A malicious/hallucinated LLM response tries to point the effect at a
+                // different NPC via Target — this must have no effect on npc_b.
+                new LLMEffect { Type = "relationship", Target = "npc_b", Delta = 2f }
+            };
+
+            EffectApplier.Apply(state, "npc_a", effects);
+
+            Assert.AreEqual(2, state.GetRelationship("npc_a"));
+            Assert.AreEqual(0, state.GetRelationship("npc_b"));
+        }
+
+        [Test]
         public void Apply_StatEffect_UpdatesNamedStat()
         {
             var state = new PlayerState();
