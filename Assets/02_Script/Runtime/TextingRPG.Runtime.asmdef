@@ -1,7 +1,9 @@
 {
     "name": "TextingRPG.Runtime",
     "rootNamespace": "TextingRPG",
-    "references": [],
+    "references": [
+        "Unity.Plugin.NewtonsoftJson"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
