@@ -1304,7 +1304,7 @@ namespace TextingRPG.Tests
                 controller.SendPlayerMessage($"메시지 {i}");
             }
 
-            Assert.LessOrEqual(provider.LastContext.History.Count, 8);
+            Assert.AreEqual(8, provider.LastContext.History.Count);
         }
 
         [Test]
@@ -1673,7 +1673,11 @@ namespace TextingRPG.LLM
         public static LLMResponse ParseResponse(string rawJson)
         {
             var root = JObject.Parse(rawJson);
-            var text = (string)root["candidates"]?[0]?["content"]?["parts"]?[0]?["text"];
+            var candidates = root["candidates"] as JArray;
+            var parts = candidates != null && candidates.Count > 0
+                ? candidates[0]["content"]?["parts"] as JArray
+                : null;
+            var text = parts != null && parts.Count > 0 ? (string)parts[0]["text"] : null;
 
             if (string.IsNullOrEmpty(text))
             {
