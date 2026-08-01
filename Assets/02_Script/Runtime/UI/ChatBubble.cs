@@ -24,6 +24,12 @@ namespace TextingRPG.UI
         public ChatBubbleState State { get; private set; } = ChatBubbleState.Idle;
         public event Action OnPlayComplete;
 
+        public float CharsPerSecond
+        {
+            get => charsPerSecond;
+            set => charsPerSecond = value;
+        }
+
         private Tween _typingTween;
         private string _fullText;
 

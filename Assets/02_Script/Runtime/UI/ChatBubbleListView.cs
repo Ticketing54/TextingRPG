@@ -10,6 +10,7 @@ namespace TextingRPG.UI
         [SerializeField] ChatBubble chatBubblePrefab;
         [SerializeField] RectTransform content;
         [SerializeField] ScrollRect scrollRect;
+        [SerializeField] float typingCharsPerSecondOverride = 0f;
 
         private readonly Queue<ChatMessage> _pending = new Queue<ChatMessage>();
         private ChatBubble _current;
@@ -40,6 +41,7 @@ namespace TextingRPG.UI
 
             var message = _pending.Dequeue();
             _current = Instantiate(chatBubblePrefab, content);
+            if (typingCharsPerSecondOverride > 0f) _current.CharsPerSecond = typingCharsPerSecondOverride;
             _current.OnPlayComplete += HandleCurrentComplete;
             _current.Play(message.Sender, message.Text);
 
