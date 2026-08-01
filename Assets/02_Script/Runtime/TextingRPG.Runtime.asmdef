@@ -2,7 +2,9 @@
     "name": "TextingRPG.Runtime",
     "rootNamespace": "TextingRPG",
     "references": [
-        "Unity.Plugin.NewtonsoftJson"
+        "Unity.Plugin.NewtonsoftJson",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
