@@ -72,5 +72,25 @@ namespace TextingRPG.Tests
                 .Select(t => (string)t);
             CollectionAssert.Contains(requiredFields, "tags");
         }
+
+        [Test]
+        public void BuildRequestBody_MapsNarrationSenderToModelRole()
+        {
+            var provider = new GeminiProvider("fake-key", "gemini-test-model");
+            var context = new ConversationContext
+            {
+                SystemPrompt = "시스템",
+                History = new List<ChatMessage>
+                {
+                    new ChatMessage(ChatSender.Narration, "밤이 깊어간다", "t1")
+                }
+            };
+
+            var bodyJson = provider.BuildRequestBody(context);
+            var body = JObject.Parse(bodyJson);
+            var contents = (JArray)body["contents"];
+
+            Assert.AreEqual("model", (string)contents[0]["role"]);
+        }
     }
 }

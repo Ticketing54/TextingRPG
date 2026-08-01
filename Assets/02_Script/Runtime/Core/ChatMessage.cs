@@ -3,7 +3,8 @@ namespace TextingRPG.Core
     public enum ChatSender
     {
         Player,
-        Npc
+        Npc,
+        Narration
     }
 
     [System.Serializable]
