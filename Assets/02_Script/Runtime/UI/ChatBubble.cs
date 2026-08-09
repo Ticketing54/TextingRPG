@@ -49,6 +49,7 @@ namespace TextingRPG.UI
             if (sender == ChatSender.Player)
             {
                 textMeshProUGUI_text.text = text;
+                textMeshProUGUI_text.maxVisibleCharacters = text.Length;
                 SetState(ChatBubbleState.Completed);
                 return;
             }
@@ -60,13 +61,13 @@ namespace TextingRPG.UI
         {
             if (State != ChatBubbleState.Typing) return;
             _typingTween?.Kill();
-            textMeshProUGUI_text.text = _fullText;
+            textMeshProUGUI_text.maxVisibleCharacters = _fullText.Length;
             SetState(ChatBubbleState.Completed);
         }
 
         private void ResizeBubbleWidth(string text)
         {
-            float naturalWidth = textMeshProUGUI_text.GetPreferredValues(text, 0f, 0f).x;
+            float naturalWidth = textMeshProUGUI_text.GetPreferredValues(text).x;
             float horizontalPadding = _bubbleLayoutGroup.padding.left + _bubbleLayoutGroup.padding.right;
             float width = Mathf.Min(maxBubbleWidth, naturalWidth + horizontalPadding);
             rectTransform_Bubble.sizeDelta = new Vector2(width, rectTransform_Bubble.sizeDelta.y);
@@ -76,13 +77,14 @@ namespace TextingRPG.UI
         {
             _fullText = text;
             SetState(ChatBubbleState.Typing);
-            textMeshProUGUI_text.text = new string(' ', text.Length);
+            textMeshProUGUI_text.text = text;
+            textMeshProUGUI_text.maxVisibleCharacters = 0;
 
             int revealed = 0;
             float duration = Mathf.Max(0.01f, text.Length / charsPerSecond);
             _typingTween = DOTween.To(() => revealed, v => revealed = v, text.Length, duration)
                 .SetEase(Ease.Linear)
-                .OnUpdate(() => textMeshProUGUI_text.text = text[..revealed] + new string(' ', text.Length - revealed))
+                .OnUpdate(() => textMeshProUGUI_text.maxVisibleCharacters = revealed)
                 .OnComplete(() => SetState(ChatBubbleState.Completed));
         }
 

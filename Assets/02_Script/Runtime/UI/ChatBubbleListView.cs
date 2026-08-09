@@ -12,7 +12,7 @@ namespace TextingRPG.UI
         [SerializeField] ScrollRect scrollRect;
         [SerializeField] float typingCharsPerSecondOverride = 0f;
 
-        private readonly Queue<ChatMessage> _pending = new Queue<ChatMessage>();
+        private readonly Queue<ChatMessage> _pending = new();
         private ChatBubble _current;
         private ChatController _controller;
 
@@ -45,15 +45,21 @@ namespace TextingRPG.UI
             _current.OnPlayComplete += HandleCurrentComplete;
             _current.Play(message.Sender, message.Text);
 
-            Canvas.ForceUpdateCanvases();
-            scrollRect.verticalNormalizedPosition = 0f;
+            ScrollToBottom();
         }
 
         private void HandleCurrentComplete()
         {
             _current.OnPlayComplete -= HandleCurrentComplete;
             _current = null;
+            ScrollToBottom();
             TryPlayNext();
+        }
+
+        private void ScrollToBottom()
+        {
+            Canvas.ForceUpdateCanvases();
+            scrollRect.verticalNormalizedPosition = 0f;
         }
     }
 }
