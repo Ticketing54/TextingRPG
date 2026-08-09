@@ -20,6 +20,7 @@ namespace TextingRPG.UI
         [SerializeField] RectTransform rectTransform_Bubble;
         [SerializeField] TextMeshProUGUI textMeshProUGUI_text;
         [SerializeField] float charsPerSecond = 40f;
+        [SerializeField] float maxBubbleWidth = 800f;
 
         public ChatBubbleState State { get; private set; } = ChatBubbleState.Idle;
         public event Action OnPlayComplete;
@@ -32,10 +33,17 @@ namespace TextingRPG.UI
 
         private Tween _typingTween;
         private string _fullText;
+        private VerticalLayoutGroup _bubbleLayoutGroup;
+
+        private void Awake()
+        {
+            _bubbleLayoutGroup = rectTransform_Bubble.GetComponent<VerticalLayoutGroup>();
+        }
 
         public void Play(ChatSender sender, string text)
         {
             verticalLayoutGroup.childAlignment = AlignmentFor(sender);
+            ResizeBubbleWidth(text);
             _typingTween?.Kill();
 
             if (sender == ChatSender.Player)
@@ -54,6 +62,14 @@ namespace TextingRPG.UI
             _typingTween?.Kill();
             textMeshProUGUI_text.text = _fullText;
             SetState(ChatBubbleState.Completed);
+        }
+
+        private void ResizeBubbleWidth(string text)
+        {
+            float naturalWidth = textMeshProUGUI_text.GetPreferredValues(text, 0f, 0f).x;
+            float horizontalPadding = _bubbleLayoutGroup.padding.left + _bubbleLayoutGroup.padding.right;
+            float width = Mathf.Min(maxBubbleWidth, naturalWidth + horizontalPadding);
+            rectTransform_Bubble.sizeDelta = new Vector2(width, rectTransform_Bubble.sizeDelta.y);
         }
 
         private void StartTyping(string text)
