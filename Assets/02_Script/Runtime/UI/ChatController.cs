@@ -33,7 +33,7 @@ namespace TextingRPG.UI
 
         public void SendPlayerMessage(string text)
         {
-            var playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
+            ChatMessage playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
             _playerState.AppendMessage(_npc.NpcId, playerMessage);
             OnMessageAdded?.Invoke(playerMessage);
 

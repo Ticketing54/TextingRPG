@@ -59,6 +59,7 @@ namespace TextingRPG.UI
         private void ScrollToBottom()
         {
             Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
             scrollRect.verticalNormalizedPosition = 0f;
         }
     }

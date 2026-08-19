@@ -65,12 +65,43 @@ namespace TextingRPG.UI
             SetState(ChatBubbleState.Completed);
         }
 
+        private const float WrapBoundaryBuffer = 4f; // lineExtents는 줄바꿈 경계값 자체라, 그대로 쓰면 문자별 우측 여백 차이로 재줄바꿈될 수 있음
+        private const int MaxWidthCorrectionAttempts = 10;
+
         private void ResizeBubbleWidth(string text)
         {
-            float naturalWidth = textMeshProUGUI_text.GetPreferredValues(text).x;
             float horizontalPadding = _bubbleLayoutGroup.padding.left + _bubbleLayoutGroup.padding.right;
-            float width = Mathf.Min(maxBubbleWidth, naturalWidth + horizontalPadding);
+
+            var textRect = textMeshProUGUI_text.rectTransform;
+            textRect.sizeDelta = new Vector2(maxBubbleWidth - horizontalPadding, textRect.sizeDelta.y);
+            textMeshProUGUI_text.text = text;
+            textMeshProUGUI_text.ForceMeshUpdate();
+
+            int targetLineCount = textMeshProUGUI_text.textInfo.lineCount;
+            float width = Mathf.Min(maxBubbleWidth, WidestLineWidth(textMeshProUGUI_text.textInfo) + horizontalPadding + WrapBoundaryBuffer);
+
+            // 버퍼로도 부족한 경계 케이스(문장부호 등)를 대비한 안전장치: 줄 수가 늘었으면 조금씩 넓혀 재검증
+            for (int attempt = 0; attempt < MaxWidthCorrectionAttempts && width < maxBubbleWidth; attempt++)
+            {
+                textRect.sizeDelta = new Vector2(width - horizontalPadding, textRect.sizeDelta.y);
+                textMeshProUGUI_text.ForceMeshUpdate();
+                if (textMeshProUGUI_text.textInfo.lineCount <= targetLineCount) break;
+                width = Mathf.Min(maxBubbleWidth, width + WrapBoundaryBuffer);
+            }
+
             rectTransform_Bubble.sizeDelta = new Vector2(width, rectTransform_Bubble.sizeDelta.y);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform_Bubble);
+        }
+
+        private static float WidestLineWidth(TMP_TextInfo textInfo)
+        {
+            float widest = 0f;
+            for (int i = 0; i < textInfo.lineCount; i++)
+            {
+                var extents = textInfo.lineInfo[i].lineExtents;
+                widest = Mathf.Max(widest, extents.max.x - extents.min.x);
+            }
+            return widest;
         }
 
         private void StartTyping(string text)
