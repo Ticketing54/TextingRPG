@@ -713,6 +713,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: npc
+      value: 
+      objectReference: {fileID: 11400000, guid: 3c24d53800d600a4da8170bff027fa3e, type: 2}
+    - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: storyGraph
+      value: 
+      objectReference: {fileID: 11400000, guid: c89530022d7f19545af000dcd11aa344, type: 2}
+    - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: geminiModel
       value: gemini-3.6-flash
       objectReference: {fileID: 0}

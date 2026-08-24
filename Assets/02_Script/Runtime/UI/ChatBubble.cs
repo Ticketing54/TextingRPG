@@ -129,7 +129,7 @@ namespace TextingRPG.UI
 
         private void ApplySenderName(ChatSender sender, string senderName)
         {
-            bool show = sender != ChatSender.Player && !string.IsNullOrEmpty(senderName);
+            bool show = sender == ChatSender.Npc && !string.IsNullOrEmpty(senderName);
             textMeshProUGUI_senderName.gameObject.SetActive(show);
             if (show) textMeshProUGUI_senderName.text = senderName;
         }
