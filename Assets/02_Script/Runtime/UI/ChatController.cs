@@ -51,8 +51,17 @@ namespace TextingRPG.UI
                 context,
                 onSuccess: response =>
                 {
-                    var npcMessage = new ChatMessage(ChatSender.Npc, response.Narration, DateTime.UtcNow.ToString("o"));
-                    _playerState.AppendMessage(_npc.NpcId, npcMessage);
+                    var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
+                    _playerState.AppendMessage(_npc.NpcId, narrationMessage);
+                    OnMessageAdded?.Invoke(narrationMessage);
+
+                    if (!string.IsNullOrEmpty(response.NpcLine))
+                    {
+                        var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
+                        _playerState.AppendMessage(_npc.NpcId, npcMessage);
+                        OnMessageAdded?.Invoke(npcMessage);
+                    }
+
                     EffectApplier.Apply(_playerState, _npc.NpcId, response.Effects);
 
                     var nextNodeId = StoryProgression.Resolve(currentNode, response.Tags, out _);
@@ -61,8 +70,6 @@ namespace TextingRPG.UI
                         _playerState.SetStoryNode(_npc.NpcId, nextNodeId);
                         OnStoryNodeChanged?.Invoke(nextNodeId);
                     }
-
-                    OnMessageAdded?.Invoke(npcMessage);
                 },
                 onError: error => OnError?.Invoke(error)
             );

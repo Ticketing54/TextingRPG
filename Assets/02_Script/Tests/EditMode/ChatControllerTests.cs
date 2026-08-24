@@ -147,5 +147,43 @@ namespace TextingRPG.Tests
             Assert.AreEqual(1, state.GetHistory("npc_a").Count);
             Assert.AreEqual("intro", state.GetStoryNode("npc_a"));
         }
+
+        [Test]
+        public void SendPlayerMessage_OnSuccess_NpcLineEmpty_OnlyNarrationMessageAdded()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider
+            {
+                NextResponse = new LLMResponse { Narration = "게르트가 조용히 고개를 끄덕인다." }
+            };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            controller.SendPlayerMessage("안녕하세요");
+
+            var history = state.GetHistory("npc_a");
+            Assert.AreEqual(2, history.Count);
+            Assert.AreEqual(ChatSender.Narration, history[1].Sender);
+            Assert.AreEqual("게르트가 조용히 고개를 끄덕인다.", history[1].Text);
+        }
+
+        [Test]
+        public void SendPlayerMessage_OnSuccess_NpcLinePresent_AddsNarrationThenNpcMessage()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider
+            {
+                NextResponse = new LLMResponse { Narration = "게르트가 다가온다.", NpcLine = "어서오세요!" }
+            };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            controller.SendPlayerMessage("안녕하세요");
+
+            var history = state.GetHistory("npc_a");
+            Assert.AreEqual(3, history.Count);
+            Assert.AreEqual(ChatSender.Narration, history[1].Sender);
+            Assert.AreEqual("게르트가 다가온다.", history[1].Text);
+            Assert.AreEqual(ChatSender.Npc, history[2].Sender);
+            Assert.AreEqual("어서오세요!", history[2].Text);
+        }
     }
 }
