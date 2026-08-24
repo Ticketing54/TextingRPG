@@ -20,6 +20,8 @@ namespace TextingRPG.UI
         public event Action<string> OnError;
         public event Action<string> OnStoryNodeChanged;
 
+        public string NpcDisplayName => _npc.DisplayName;
+
         public ChatController(
             PlayerState playerState, ILLMProvider provider, NPCDefinition npc,
             string worldDescription, StoryGraph storyGraph)

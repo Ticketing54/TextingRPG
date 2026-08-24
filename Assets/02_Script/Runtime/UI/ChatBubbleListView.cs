@@ -43,7 +43,7 @@ namespace TextingRPG.UI
             _current = Instantiate(chatBubblePrefab, content);
             if (typingCharsPerSecondOverride > 0f) _current.CharsPerSecond = typingCharsPerSecondOverride;
             _current.OnPlayComplete += HandleCurrentComplete;
-            _current.Play(message.Sender, message.Text);
+            _current.Play(message.Sender, message.Text, _controller.NpcDisplayName);
 
             ScrollToBottom();
         }

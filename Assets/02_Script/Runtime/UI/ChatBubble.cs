@@ -19,6 +19,7 @@ namespace TextingRPG.UI
         [SerializeField] VerticalLayoutGroup verticalLayoutGroup;
         [SerializeField] RectTransform rectTransform_Bubble;
         [SerializeField] TextMeshProUGUI textMeshProUGUI_text;
+        [SerializeField] TextMeshProUGUI textMeshProUGUI_senderName;
         [SerializeField] float charsPerSecond = 40f;
         [SerializeField] float maxBubbleWidth = 800f;
 
@@ -40,10 +41,11 @@ namespace TextingRPG.UI
             _bubbleLayoutGroup = rectTransform_Bubble.GetComponent<VerticalLayoutGroup>();
         }
 
-        public void Play(ChatSender sender, string text)
+        public void Play(ChatSender sender, string text, string senderName = null)
         {
             verticalLayoutGroup.childAlignment = AlignmentFor(sender);
             ResizeBubbleWidth(text);
+            ApplySenderName(sender, senderName);
             _typingTween?.Kill();
 
             if (sender == ChatSender.Player)
@@ -123,6 +125,13 @@ namespace TextingRPG.UI
         {
             State = state;
             if (state == ChatBubbleState.Completed) OnPlayComplete?.Invoke();
+        }
+
+        private void ApplySenderName(ChatSender sender, string senderName)
+        {
+            bool show = sender != ChatSender.Player && !string.IsNullOrEmpty(senderName);
+            textMeshProUGUI_senderName.gameObject.SetActive(show);
+            if (show) textMeshProUGUI_senderName.text = senderName;
         }
 
         private static TextAnchor AlignmentFor(ChatSender sender) => sender switch
