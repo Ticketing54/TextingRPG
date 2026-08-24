@@ -51,5 +51,14 @@ namespace TextingRPG.Tests
 
             StringAssert.Contains("짧은 메신저 메시지", prompt);
         }
+
+        [Test]
+        public void Build_IncludesNarrationAndNpcLineInstruction()
+        {
+            var prompt = SystemPromptBuilder.Build(MakeNpc(), "세계관", MakeNode());
+
+            StringAssert.Contains("narration", prompt);
+            StringAssert.Contains("npcLine", prompt);
+        }
     }
 }
