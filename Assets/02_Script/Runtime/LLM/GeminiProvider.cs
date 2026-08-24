@@ -104,11 +104,12 @@ namespace TextingRPG.LLM
                 ["type"] = "OBJECT",
                 ["properties"] = new JObject
                 {
-                    ["reply"] = new JObject { ["type"] = "STRING" },
+                    ["narration"] = new JObject { ["type"] = "STRING" },
+                    ["npcLine"] = new JObject { ["type"] = "STRING" },
                     ["tags"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
                     ["effects"] = new JObject { ["type"] = "ARRAY", ["items"] = effectSchema }
                 },
-                ["required"] = new JArray("reply", "tags", "effects")
+                ["required"] = new JArray("narration", "tags", "effects")
             };
 
             var body = new JObject
@@ -146,7 +147,8 @@ namespace TextingRPG.LLM
             var payload = JObject.Parse(text);
             var response = new LLMResponse
             {
-                Reply = (string)payload["reply"],
+                Narration = (string)payload["narration"],
+                NpcLine = (string)payload["npcLine"] ?? "",
                 Tags = new List<string>(),
                 Effects = new List<LLMEffect>()
             };

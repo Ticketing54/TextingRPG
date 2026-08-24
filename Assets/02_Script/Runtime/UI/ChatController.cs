@@ -51,7 +51,7 @@ namespace TextingRPG.UI
                 context,
                 onSuccess: response =>
                 {
-                    var npcMessage = new ChatMessage(ChatSender.Npc, response.Reply, DateTime.UtcNow.ToString("o"));
+                    var npcMessage = new ChatMessage(ChatSender.Npc, response.Narration, DateTime.UtcNow.ToString("o"));
                     _playerState.AppendMessage(_npc.NpcId, npcMessage);
                     EffectApplier.Apply(_playerState, _npc.NpcId, response.Effects);
 

@@ -11,20 +11,20 @@ namespace TextingRPG.Tests
         {
             var provider = new MockLLMProvider
             {
-                NextResponse = new LLMResponse { Reply = "안녕!" }
+                NextResponse = new LLMResponse { Narration = "안녕!" }
             };
             var context = new ConversationContext { SystemPrompt = "test", History = new List<Core.ChatMessage>() };
 
             LLMResponse received = null;
             provider.SendMessage(context, r => received = r, e => Assert.Fail("onError should not be called"));
 
-            Assert.AreEqual("안녕!", received.Reply);
+            Assert.AreEqual("안녕!", received.Narration);
         }
 
         [Test]
         public void SendMessage_RecordsLastContext()
         {
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Reply = "x" } };
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "x" } };
             var context = new ConversationContext { SystemPrompt = "system-prompt-xyz", History = new List<Core.ChatMessage>() };
 
             provider.SendMessage(context, _ => { }, _ => { });

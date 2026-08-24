@@ -37,7 +37,7 @@ namespace TextingRPG.Tests
         public void SendPlayerMessage_AppendsPlayerMessageToHistoryImmediately()
         {
             var state = new PlayerState();
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Reply = "ok" } };
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
             var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
 
             controller.SendPlayerMessage("안녕하세요");
@@ -51,7 +51,7 @@ namespace TextingRPG.Tests
         public void SendPlayerMessage_InitializesStoryNodeToGraphStartNode()
         {
             var state = new PlayerState();
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Reply = "ok" } };
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
             var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
 
             controller.SendPlayerMessage("안녕하세요");
@@ -63,7 +63,7 @@ namespace TextingRPG.Tests
         public void SendPlayerMessage_SystemPromptIncludesCurrentNodeSceneDescription()
         {
             var state = new PlayerState();
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Reply = "ok" } };
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
             var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
 
             controller.SendPlayerMessage("안녕하세요");
@@ -79,7 +79,7 @@ namespace TextingRPG.Tests
             {
                 NextResponse = new LLMResponse
                 {
-                    Reply = "반가워요!",
+                    Narration = "반가워요!",
                     Tags = new List<string> { "friendly" },
                     Effects = new List<LLMEffect> { new LLMEffect { Type = "relationship", Target = "npc_a", Delta = 2f } }
                 }
@@ -103,7 +103,7 @@ namespace TextingRPG.Tests
             var state = new PlayerState();
             var provider = new MockLLMProvider
             {
-                NextResponse = new LLMResponse { Reply = "음...", Tags = new List<string> { "neutral" } }
+                NextResponse = new LLMResponse { Narration = "음...", Tags = new List<string> { "neutral" } }
             };
             var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
 
@@ -120,7 +120,7 @@ namespace TextingRPG.Tests
         public void SendPlayerMessage_OnlySendsMessagesWithinHistoryWindow()
         {
             var state = new PlayerState();
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Reply = "ok" } };
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
             var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
 
             for (int i = 0; i < 10; i++)
