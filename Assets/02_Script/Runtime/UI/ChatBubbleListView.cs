@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TextingRPG.Core;
 using UnityEngine;
@@ -12,8 +13,11 @@ namespace TextingRPG.UI
         [SerializeField] ScrollRect scrollRect;
         [SerializeField] float typingCharsPerSecondOverride = 0f;
 
+        public event Action<ChatMessage> OnMessagePlaybackComplete;
+
         private readonly Queue<ChatMessage> _pending = new();
         private ChatBubble _current;
+        private ChatMessage _currentMessage;
         private ChatController _controller;
 
         public void Bind(ChatController controller)
@@ -40,6 +44,7 @@ namespace TextingRPG.UI
             if (_pending.Count == 0) return;
 
             var message = _pending.Dequeue();
+            _currentMessage = message;
             _current = Instantiate(chatBubblePrefab, content);
             if (typingCharsPerSecondOverride > 0f) _current.CharsPerSecond = typingCharsPerSecondOverride;
             _current.OnPlayComplete += HandleCurrentComplete;
@@ -52,8 +57,12 @@ namespace TextingRPG.UI
         {
             _current.OnPlayComplete -= HandleCurrentComplete;
             _current = null;
+            var completedMessage = _currentMessage;
+            _currentMessage = null;
             ScrollToBottom();
             TryPlayNext();
+
+            OnMessagePlaybackComplete?.Invoke(completedMessage);
         }
 
         private void ScrollToBottom()

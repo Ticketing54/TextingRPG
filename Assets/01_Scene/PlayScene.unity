@@ -626,11 +626,11 @@ PrefabInstance:
       objectReference: {fileID: 1797593317}
     - target: {fileID: 3458760026250969489, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3458760026250969489, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4599556173817953068, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_Pivot.x
@@ -713,6 +713,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: geminiModel
+      value: gemini-3.6-flash
+      objectReference: {fileID: 0}
+    - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: chatBubbleListView
       value: 
       objectReference: {fileID: 540020519}
@@ -730,7 +734,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5450767970953807406, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 17
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

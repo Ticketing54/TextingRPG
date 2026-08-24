@@ -14,7 +14,7 @@ namespace TextingRPG.LLM
         // https://ai.google.dev/gemini-api/docs/structured-output 에서 responseSchema 형식을 확인할 것.
         private const string ApiUrlTemplate =
             "https://generativelanguage.googleapis.com/v1beta/models/{0}:generateContent";
-        private const int MaxOutputTokens = 512;
+        private const int MaxOutputTokens = 2048; // thinking 모델은 응답 전에 추론 토큰을 소비하므로 여유 있게 잡는다
 
         private readonly string _apiKey;
         private readonly string _model;
