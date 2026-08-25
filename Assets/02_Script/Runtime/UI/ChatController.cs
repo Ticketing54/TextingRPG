@@ -11,6 +11,7 @@ namespace TextingRPG.UI
         private const int MaxHistoryMessages = 8;
         private const int WrapUpTurnThreshold = 80;
         private const int MaxTurns = 100;
+        private const string OpeningKickoffMessage = "(모험이 시작된다.)";
 
         private readonly PlayerState _playerState;
         private readonly ILLMProvider _provider;
@@ -44,7 +45,12 @@ namespace TextingRPG.UI
             _playerState.SetStoryNode(_npc.NpcId, _storyGraph.StartNodeId);
 
             var systemPrompt = SystemPromptBuilder.BuildOpening(_npc, _worldDescription, startNode);
-            var context = new ConversationContext { SystemPrompt = systemPrompt, History = new System.Collections.Generic.List<ChatMessage>() };
+            // Gemini API는 contents가 빈 배열이면 요청을 거부하므로, 저장되지 않는 시작 트리거 턴 하나를 심어준다.
+            var kickoff = new System.Collections.Generic.List<ChatMessage>
+            {
+                new ChatMessage(ChatSender.Player, OpeningKickoffMessage, DateTime.UtcNow.ToString("o"))
+            };
+            var context = new ConversationContext { SystemPrompt = systemPrompt, History = kickoff };
 
             _provider.SendMessage(
                 context,

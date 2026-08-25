@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using TextingRPG.Core;
 using TextingRPG.LLM;
@@ -267,7 +268,7 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void BeginAdventure_UsesOpeningSystemPromptWithNoHistory()
+        public void BeginAdventure_UsesOpeningSystemPromptWithSingleKickoffTurn()
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다." } };
@@ -276,7 +277,9 @@ namespace TextingRPG.Tests
             controller.BeginAdventure();
 
             StringAssert.Contains("무엇을 하면 좋을지", provider.LastContext.SystemPrompt);
-            Assert.AreEqual(0, provider.LastContext.History.Count);
+            // Gemini API가 빈 contents를 거부하므로 저장되지 않는 시작 트리거 턴이 하나 있어야 한다.
+            Assert.AreEqual(1, provider.LastContext.History.Count);
+            Assert.AreEqual(0, state.GetHistory("npc_a").Count(m => m.Sender == ChatSender.Player));
         }
 
         [Test]

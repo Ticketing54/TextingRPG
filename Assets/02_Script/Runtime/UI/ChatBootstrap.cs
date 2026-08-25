@@ -56,6 +56,8 @@ namespace TextingRPG.UI
             inputField.onSubmit.AddListener(_ => SendCurrentInput());
 
             chatUIRoot.SetActive(true);
+            sendButton.interactable = false;
+            _controller.BeginAdventure();
         }
 
         private void SendCurrentInput()
