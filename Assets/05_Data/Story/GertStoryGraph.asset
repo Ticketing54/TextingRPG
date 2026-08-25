@@ -50,11 +50,19 @@ MonoBehaviour:
     SceneDescription: "\uD50C\uB808\uC774\uC5B4\uAC00 \uBC29\uC744 \uC7A1\uAE30\uB85C
       \uD588\uB2E4. \uAC8C\uB974\uD2B8\uAC00 \uC5F4\uC1E0\uB97C \uAC74\uB124\uC8FC\uBA70
       \uC548\uB0B4\uD55C\uB2E4."
-    Transitions: []
+    Transitions:
+    - Tag: ask_rumor
+      NextNodeId: rumor
+    - Tag: friendly
+      NextNodeId: chat
   - NodeId: rumor
     SceneDescription: "\uAC8C\uB974\uD2B8\uAC00 \uB9C8\uC744\uC5D0 \uB5A0\uB3C4\uB294
       \uC18C\uBB38 \uD558\uB098\uB97C \uB4E4\uB824\uC8FC\uACE0 \uC788\uB2E4."
-    Transitions: []
+    Transitions:
+    - Tag: ask_room
+      NextNodeId: room
+    - Tag: friendly
+      NextNodeId: chat
   - NodeId: kicked_out
     SceneDescription: "\uAC8C\uB974\uD2B8\uAC00 \uD654\uAC00 \uB098\uC11C \uD50C\uB808\uC774\uC5B4\uB97C
       \uC5EC\uAD00 \uBC16\uC73C\uB85C \uCAD3\uC544\uB0C8\uB2E4."

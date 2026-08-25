@@ -49,8 +49,14 @@ namespace TextingRPG.Tests
             Assert.AreEqual("chat", wary.Transitions.Single(t => t.Tag == "apologize").NextNodeId);
             Assert.AreEqual("kicked_out", wary.Transitions.Single(t => t.Tag == "threaten").NextNodeId);
 
-            Assert.AreEqual(0, graph.GetNode("room").Transitions.Count);
-            Assert.AreEqual(0, graph.GetNode("rumor").Transitions.Count);
+            var room = graph.GetNode("room");
+            Assert.AreEqual("rumor", room.Transitions.Single(t => t.Tag == "ask_rumor").NextNodeId);
+            Assert.AreEqual("chat", room.Transitions.Single(t => t.Tag == "friendly").NextNodeId);
+
+            var rumor = graph.GetNode("rumor");
+            Assert.AreEqual("room", rumor.Transitions.Single(t => t.Tag == "ask_room").NextNodeId);
+            Assert.AreEqual("chat", rumor.Transitions.Single(t => t.Tag == "friendly").NextNodeId);
+
             Assert.AreEqual(0, graph.GetNode("kicked_out").Transitions.Count);
         }
     }
