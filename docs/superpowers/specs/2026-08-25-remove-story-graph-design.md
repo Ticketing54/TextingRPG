@@ -55,6 +55,19 @@
 - `NPCDefinition`, `KeywordIntroPanel`, `worldDescription`
 - `HistoryWindow.TakeRecent` (최근 8개 메시지 컷)
 
+## 토큰 소모 대응: 요약 길이 상한
+
+`Summary`는 고정 텍스트였던 `SceneDescription`과 달리 매 턴 LLM이 새로 생성해서 출력하는
+필드다. 길이 제한이 없으면 턴이 진행될수록 요약이 계속 길어져 입력(다음 턴 프롬프트에
+재삽입)과 출력(매 턴 재생성) 토큰이 동반 증가할 수 있다. 이를 막기 위해
+`SystemPromptBuilder.Build`/`BuildOpening`의 지시문에 요약 길이 상한을 명시한다:
+
+> "요약은 항상 5문장 이내로 압축해서 다시 써라. 오래된 세부사항은 최근 상황을 이해하는 데
+> 더 이상 필요하지 않으면 자연스럽게 생략해라."
+
+이 지시문 덕분에 요약 크기는 턴 수와 무관하게 대략 일정하게 유지되고, 턴당 토큰 증가폭은
+(태그 필드 제거로 상쇄되는 부분도 있어) 노드 방식 대비 소폭 증가하되 폭주하지 않는다.
+
 ## 데이터 흐름
 
 1. `BeginAdventure()`: 요약 없이(빈 문자열) 오프닝 프롬프트 생성 → LLM이 `Narration`/
