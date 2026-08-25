@@ -77,5 +77,31 @@ namespace TextingRPG.Tests
 
             Assert.AreEqual(promptWithoutArg, promptWithEmptyArg);
         }
+
+        [Test]
+        public void BuildOpening_IncludesWorldDescriptionPersonaAndStartSceneDescription()
+        {
+            var prompt = SystemPromptBuilder.BuildOpening(MakeNpc(), "이곳은 중세 판타지 마을이다.", MakeNode());
+
+            StringAssert.Contains("이곳은 중세 판타지 마을이다.", prompt);
+            StringAssert.Contains("무뚝뚝하지만 정 많은 상인이다.", prompt);
+            StringAssert.Contains("플레이어가 막 상점에 들어왔다.", prompt);
+        }
+
+        [Test]
+        public void BuildOpening_InstructsSituationAndGoalAwareness()
+        {
+            var prompt = SystemPromptBuilder.BuildOpening(MakeNpc(), "세계관", MakeNode());
+
+            StringAssert.Contains("무엇을 하면 좋을지", prompt);
+        }
+
+        [Test]
+        public void BuildOpening_InstructsEmptyTagsAndEffects()
+        {
+            var prompt = SystemPromptBuilder.BuildOpening(MakeNpc(), "세계관", MakeNode());
+
+            StringAssert.Contains("tags와 effects는", prompt);
+        }
     }
 }
