@@ -52,6 +52,14 @@ namespace TextingRPG.Tests
         }
 
         [Test]
+        public void Build_InstructsNpcLineDefaultsToEmpty()
+        {
+            var prompt = SystemPromptBuilder.Build(MakeNpc(), "세계관", "요약");
+
+            StringAssert.Contains("npcLine은 기본적으로 비워", prompt);
+        }
+
+        [Test]
         public void Build_InstructsSummaryLengthCap()
         {
             var prompt = SystemPromptBuilder.Build(MakeNpc(), "세계관", "요약");
@@ -91,6 +99,14 @@ namespace TextingRPG.Tests
             var prompt = SystemPromptBuilder.BuildOpening(MakeNpc(), "세계관");
 
             StringAssert.Contains("무엇을 하면 좋을지", prompt);
+        }
+
+        [Test]
+        public void BuildOpening_InstructsNpcLineDefaultsToEmpty()
+        {
+            var prompt = SystemPromptBuilder.BuildOpening(MakeNpc(), "세계관");
+
+            StringAssert.Contains("npcLine은 기본적으로 비워", prompt);
         }
 
         [Test]
