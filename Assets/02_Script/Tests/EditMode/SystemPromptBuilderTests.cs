@@ -60,5 +60,22 @@ namespace TextingRPG.Tests
             StringAssert.Contains("narration", prompt);
             StringAssert.Contains("npcLine", prompt);
         }
+
+        [Test]
+        public void Build_WithEndingHint_AppendsHintToPrompt()
+        {
+            var prompt = SystemPromptBuilder.Build(MakeNpc(), "세계관", MakeNode(), "이번이 마지막 턴이다.");
+
+            StringAssert.Contains("이번이 마지막 턴이다.", prompt);
+        }
+
+        [Test]
+        public void Build_WithoutEndingHint_SameAsEmptyStringHint()
+        {
+            var promptWithoutArg = SystemPromptBuilder.Build(MakeNpc(), "세계관", MakeNode());
+            var promptWithEmptyArg = SystemPromptBuilder.Build(MakeNpc(), "세계관", MakeNode(), "");
+
+            Assert.AreEqual(promptWithoutArg, promptWithEmptyArg);
+        }
     }
 }

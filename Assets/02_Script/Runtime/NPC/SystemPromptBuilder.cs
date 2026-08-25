@@ -5,7 +5,7 @@ namespace TextingRPG.NPC
 {
     public static class SystemPromptBuilder
     {
-        public static string Build(NPCDefinition npc, string worldDescription, StoryNode currentNode)
+        public static string Build(NPCDefinition npc, string worldDescription, StoryNode currentNode, string endingHint = "")
         {
             var sb = new StringBuilder();
             sb.AppendLine("[세계관]");
@@ -27,6 +27,13 @@ namespace TextingRPG.NPC
                 "npcLine에 담는다 (말할 필요가 없으면 npcLine은 빈 문자열로 둔다). 이번 교환에서 " +
                 "드러난 플레이어의 의도를 [이번 턴에 사용 가능한 태그] 중에서만 골라 tags로 " +
                 "보고하며, 호감도나 스탯이 바뀔 만한 일이 있었다면 effects로 보고한다.");
+
+            if (!string.IsNullOrEmpty(endingHint))
+            {
+                sb.AppendLine();
+                sb.AppendLine(endingHint);
+            }
+
             return sb.ToString();
         }
     }
