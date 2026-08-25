@@ -9,6 +9,7 @@ namespace TextingRPG.Core
         private readonly Dictionary<string, List<ChatMessage>> _conversationHistories =
             new Dictionary<string, List<ChatMessage>>();
         private readonly Dictionary<string, string> _storyNodes = new Dictionary<string, string>();
+        private readonly Dictionary<string, int> _turnCounts = new Dictionary<string, int>();
 
         public int GetRelationship(string npcId) =>
             _relationships.TryGetValue(npcId, out var value) ? value : 0;
@@ -39,5 +40,11 @@ namespace TextingRPG.Core
             _storyNodes.TryGetValue(npcId, out var nodeId) ? nodeId : null;
 
         public void SetStoryNode(string npcId, string nodeId) => _storyNodes[npcId] = nodeId;
+
+        public int GetTurnCount(string npcId) =>
+            _turnCounts.TryGetValue(npcId, out var value) ? value : 0;
+
+        public void IncrementTurnCount(string npcId) =>
+            _turnCounts[npcId] = GetTurnCount(npcId) + 1;
     }
 }

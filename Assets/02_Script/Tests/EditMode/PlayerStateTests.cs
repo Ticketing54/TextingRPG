@@ -66,5 +66,29 @@ namespace TextingRPG.Tests
             state.SetStoryNode("npc_a", "node_intro");
             Assert.AreEqual("node_intro", state.GetStoryNode("npc_a"));
         }
+
+        [Test]
+        public void GetTurnCount_DefaultsToZero()
+        {
+            var state = new PlayerState();
+            Assert.AreEqual(0, state.GetTurnCount("npc_a"));
+        }
+
+        [Test]
+        public void IncrementTurnCount_IncreasesCountForThatNpc()
+        {
+            var state = new PlayerState();
+            state.IncrementTurnCount("npc_a");
+            state.IncrementTurnCount("npc_a");
+            Assert.AreEqual(2, state.GetTurnCount("npc_a"));
+        }
+
+        [Test]
+        public void IncrementTurnCount_DoesNotAffectOtherNpcsCount()
+        {
+            var state = new PlayerState();
+            state.IncrementTurnCount("npc_a");
+            Assert.AreEqual(0, state.GetTurnCount("npc_b"));
+        }
     }
 }
