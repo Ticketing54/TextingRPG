@@ -4,7 +4,6 @@ using NUnit.Framework;
 using TextingRPG.Core;
 using TextingRPG.LLM;
 using TextingRPG.NPC;
-using TextingRPG.Story;
 using TextingRPG.UI;
 using UnityEngine;
 
@@ -21,25 +20,12 @@ namespace TextingRPG.Tests
             return npc;
         }
 
-        private static StoryGraph MakeGraph()
-        {
-            var intro = new StoryNode { NodeId = "intro", SceneDescription = "플레이어가 막 상점에 들어왔다." };
-            intro.Transitions.Add(new StoryTransition { Tag = "friendly", NextNodeId = "trust" });
-            var trust = new StoryNode { NodeId = "trust", SceneDescription = "손님이 마음에 들기 시작했다." };
-
-            var graph = ScriptableObject.CreateInstance<StoryGraph>();
-            graph.NpcId = "npc_a";
-            graph.StartNodeId = "intro";
-            graph.Nodes = new List<StoryNode> { intro, trust };
-            return graph;
-        }
-
         [Test]
         public void SendPlayerMessage_AppendsPlayerMessageToHistoryImmediately()
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.SendPlayerMessage("안녕하세요");
 
@@ -49,23 +35,12 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void SendPlayerMessage_InitializesStoryNodeToGraphStartNode()
+        public void SendPlayerMessage_SystemPromptIncludesPreviousSummary()
         {
             var state = new PlayerState();
+            state.SetSummary("npc_a", "플레이어가 막 상점에 들어왔다.");
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
-
-            controller.SendPlayerMessage("안녕하세요");
-
-            Assert.AreEqual("intro", state.GetStoryNode("npc_a"));
-        }
-
-        [Test]
-        public void SendPlayerMessage_SystemPromptIncludesCurrentNodeSceneDescription()
-        {
-            var state = new PlayerState();
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.SendPlayerMessage("안녕하세요");
 
@@ -73,7 +48,7 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void SendPlayerMessage_OnSuccess_AppendsReplyAppliesEffectsAndAdvancesStoryNode()
+        public void SendPlayerMessage_OnSuccess_AppendsReplyAppliesEffectsAndStoresSummary()
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider
@@ -81,40 +56,17 @@ namespace TextingRPG.Tests
                 NextResponse = new LLMResponse
                 {
                     Narration = "반가워요!",
-                    Tags = new List<string> { "friendly" },
+                    Summary = "플레이어가 상점에 들어와 인사를 나눴다.",
                     Effects = new List<LLMEffect> { new LLMEffect { Type = "relationship", Target = "npc_a", Delta = 2f } }
                 }
             };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
-
-            string changedNode = null;
-            controller.OnStoryNodeChanged += n => changedNode = n;
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.SendPlayerMessage("안녕하세요");
 
             Assert.AreEqual(2, state.GetHistory("npc_a").Count);
             Assert.AreEqual(2, state.GetRelationship("npc_a"));
-            Assert.AreEqual("trust", state.GetStoryNode("npc_a"));
-            Assert.AreEqual("trust", changedNode);
-        }
-
-        [Test]
-        public void SendPlayerMessage_NoMatchingTag_StaysOnSameNodeAndDoesNotFireStoryNodeChanged()
-        {
-            var state = new PlayerState();
-            var provider = new MockLLMProvider
-            {
-                NextResponse = new LLMResponse { Narration = "음...", Tags = new List<string> { "neutral" } }
-            };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
-
-            var fired = false;
-            controller.OnStoryNodeChanged += _ => fired = true;
-
-            controller.SendPlayerMessage("아무말");
-
-            Assert.AreEqual("intro", state.GetStoryNode("npc_a"));
-            Assert.IsFalse(fired);
+            Assert.AreEqual("플레이어가 상점에 들어와 인사를 나눴다.", state.GetSummary("npc_a"));
         }
 
         [Test]
@@ -122,7 +74,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             for (int i = 0; i < 10; i++)
             {
@@ -133,11 +85,11 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void SendPlayerMessage_OnProviderError_FiresOnErrorAndDoesNotAdvanceNode()
+        public void SendPlayerMessage_OnProviderError_FiresOnErrorAndDoesNotStoreSummary()
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextError = "network down" };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             string capturedError = null;
             controller.OnError += e => capturedError = e;
@@ -146,7 +98,7 @@ namespace TextingRPG.Tests
 
             Assert.AreEqual("network down", capturedError);
             Assert.AreEqual(1, state.GetHistory("npc_a").Count);
-            Assert.AreEqual("intro", state.GetStoryNode("npc_a"));
+            Assert.AreEqual("", state.GetSummary("npc_a"));
         }
 
         [Test]
@@ -157,7 +109,7 @@ namespace TextingRPG.Tests
             {
                 NextResponse = new LLMResponse { Narration = "게르트가 조용히 고개를 끄덕인다." }
             };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.SendPlayerMessage("안녕하세요");
 
@@ -175,7 +127,7 @@ namespace TextingRPG.Tests
             {
                 NextResponse = new LLMResponse { Narration = "게르트가 다가온다.", NpcLine = "어서오세요!" }
             };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.SendPlayerMessage("안녕하세요");
 
@@ -192,7 +144,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             for (int i = 0; i < 79; i++)
             {
@@ -207,7 +159,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             for (int i = 0; i < 80; i++)
             {
@@ -222,7 +174,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             bool ended = false;
             controller.OnConversationEnded += () => ended = true;
@@ -241,7 +193,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             for (int i = 0; i < 100; i++)
             {
@@ -256,15 +208,18 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void BeginAdventure_SetsStoryNodeToGraphStartNode()
+        public void BeginAdventure_OnSuccess_StoresSummary()
         {
             var state = new PlayerState();
-            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다." } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var provider = new MockLLMProvider
+            {
+                NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다.", Summary = "플레이어가 상점 앞에 도착했다." }
+            };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.BeginAdventure();
 
-            Assert.AreEqual("intro", state.GetStoryNode("npc_a"));
+            Assert.AreEqual("플레이어가 상점 앞에 도착했다.", state.GetSummary("npc_a"));
         }
 
         [Test]
@@ -272,7 +227,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다." } };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.BeginAdventure();
 
@@ -290,7 +245,7 @@ namespace TextingRPG.Tests
             {
                 NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다.", NpcLine = "어서오세요." }
             };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             controller.BeginAdventure();
 
@@ -308,7 +263,7 @@ namespace TextingRPG.Tests
         {
             var state = new PlayerState();
             var provider = new MockLLMProvider { NextError = "network down" };
-            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관");
 
             string capturedError = null;
             controller.OnError += e => capturedError = e;

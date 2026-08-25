@@ -106,10 +106,10 @@ namespace TextingRPG.LLM
                 {
                     ["narration"] = new JObject { ["type"] = "STRING" },
                     ["npcLine"] = new JObject { ["type"] = "STRING" },
-                    ["tags"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
+                    ["summary"] = new JObject { ["type"] = "STRING" },
                     ["effects"] = new JObject { ["type"] = "ARRAY", ["items"] = effectSchema }
                 },
-                ["required"] = new JArray("narration", "tags", "effects")
+                ["required"] = new JArray("narration", "summary", "effects")
             };
 
             var body = new JObject
@@ -149,17 +149,9 @@ namespace TextingRPG.LLM
             {
                 Narration = (string)payload["narration"],
                 NpcLine = (string)payload["npcLine"] ?? "",
-                Tags = new List<string>(),
+                Summary = (string)payload["summary"] ?? "",
                 Effects = new List<LLMEffect>()
             };
-
-            if (payload["tags"] is JArray tagsToken)
-            {
-                foreach (var tag in tagsToken)
-                {
-                    response.Tags.Add((string)tag);
-                }
-            }
 
             if (payload["effects"] is JArray effectsToken)
             {

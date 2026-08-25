@@ -7,7 +7,7 @@ namespace TextingRPG.LLM
     {
         public string Narration;
         public string NpcLine = "";
-        public List<string> Tags = new List<string>();
+        public string Summary = "";
         public List<LLMEffect> Effects = new List<LLMEffect>();
     }
 }

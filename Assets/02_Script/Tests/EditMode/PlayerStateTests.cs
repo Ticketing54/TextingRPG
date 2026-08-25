@@ -53,18 +53,18 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void GetStoryNode_DefaultsToNull()
+        public void GetSummary_DefaultsToEmptyString()
         {
             var state = new PlayerState();
-            Assert.IsNull(state.GetStoryNode("npc_a"));
+            Assert.AreEqual("", state.GetSummary("npc_a"));
         }
 
         [Test]
-        public void SetStoryNode_ThenGet_ReturnsSetValue()
+        public void SetSummary_ThenGet_ReturnsSetValue()
         {
             var state = new PlayerState();
-            state.SetStoryNode("npc_a", "node_intro");
-            Assert.AreEqual("node_intro", state.GetStoryNode("npc_a"));
+            state.SetSummary("npc_a", "플레이어가 여관에 도착했다.");
+            Assert.AreEqual("플레이어가 여관에 도착했다.", state.GetSummary("npc_a"));
         }
 
         [Test]

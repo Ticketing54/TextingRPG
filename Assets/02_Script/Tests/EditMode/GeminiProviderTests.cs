@@ -15,7 +15,7 @@ namespace TextingRPG.Tests
                     ""content"": {
                         ""role"": ""model"",
                         ""parts"": [
-                            { ""text"": ""{\""narration\"":\""게르트가 손님을 맞이한다.\"",\""npcLine\"":\""어서오세요, 손님!\"",\""tags\"":[\""friendly\""],\""effects\"":[{\""type\"":\""relationship\"",\""target\"":\""npc_a\"",\""delta\"":1.0}]}"" }
+                            { ""text"": ""{\""narration\"":\""게르트가 손님을 맞이한다.\"",\""npcLine\"":\""어서오세요, 손님!\"",\""summary\"":\""플레이어가 여관에 들어와 인사를 나눴다.\"",\""effects\"":[{\""type\"":\""relationship\"",\""target\"":\""npc_a\"",\""delta\"":1.0}]}"" }
                         ]
                     }
                 }
@@ -28,7 +28,7 @@ namespace TextingRPG.Tests
                     ""content"": {
                         ""role"": ""model"",
                         ""parts"": [
-                            { ""text"": ""{\""narration\"":\""문이 닫힌다.\"",\""npcLine\"":\""\"",\""tags\"":[],\""effects\"":[]}"" }
+                            { ""text"": ""{\""narration\"":\""문이 닫힌다.\"",\""npcLine\"":\""\"",\""summary\"":\""\"",\""effects\"":[]}"" }
                         ]
                     }
                 }
@@ -36,13 +36,13 @@ namespace TextingRPG.Tests
         }";
 
         [Test]
-        public void ParseResponse_ExtractsNarrationNpcLineTagsAndEffectsFromNestedJsonText()
+        public void ParseResponse_ExtractsNarrationNpcLineSummaryAndEffectsFromNestedJsonText()
         {
             var response = GeminiProvider.ParseResponse(SampleGeminiResponse);
 
             Assert.AreEqual("게르트가 손님을 맞이한다.", response.Narration);
             Assert.AreEqual("어서오세요, 손님!", response.NpcLine);
-            CollectionAssert.AreEqual(new[] { "friendly" }, response.Tags);
+            Assert.AreEqual("플레이어가 여관에 들어와 인사를 나눴다.", response.Summary);
             Assert.AreEqual(1, response.Effects.Count);
             Assert.AreEqual("relationship", response.Effects[0].Type);
             Assert.AreEqual("npc_a", response.Effects[0].Target);
@@ -50,12 +50,13 @@ namespace TextingRPG.Tests
         }
 
         [Test]
-        public void ParseResponse_EmptyNpcLine_ReturnsEmptyString()
+        public void ParseResponse_EmptyNpcLineAndSummary_ReturnsEmptyStrings()
         {
             var response = GeminiProvider.ParseResponse(SampleGeminiResponseWithoutNpcLine);
 
             Assert.AreEqual("문이 닫힌다.", response.Narration);
             Assert.AreEqual("", response.NpcLine);
+            Assert.AreEqual("", response.Summary);
         }
 
         [Test]
@@ -94,11 +95,12 @@ namespace TextingRPG.Tests
             var schemaProperties = (JObject)body["generationConfig"]["responseSchema"]["properties"];
             Assert.IsTrue(schemaProperties.ContainsKey("narration"));
             Assert.IsTrue(schemaProperties.ContainsKey("npcLine"));
+            Assert.IsTrue(schemaProperties.ContainsKey("summary"));
 
             var requiredFields = ((JArray)body["generationConfig"]["responseSchema"]["required"])
                 .Select(t => (string)t)
                 .ToList();
-            CollectionAssert.Contains(requiredFields, "tags");
+            CollectionAssert.Contains(requiredFields, "summary");
             CollectionAssert.Contains(requiredFields, "narration");
             CollectionAssert.DoesNotContain(requiredFields, "npcLine");
         }

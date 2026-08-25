@@ -2,7 +2,6 @@ using System;
 using TextingRPG.Core;
 using TextingRPG.LLM;
 using TextingRPG.NPC;
-using TextingRPG.Story;
 
 namespace TextingRPG.UI
 {
@@ -17,34 +16,27 @@ namespace TextingRPG.UI
         private readonly ILLMProvider _provider;
         private readonly NPCDefinition _npc;
         private readonly string _worldDescription;
-        private readonly StoryGraph _storyGraph;
 
         private bool _conversationEnded;
 
         public event Action<ChatMessage> OnMessageAdded;
         public event Action<string> OnError;
-        public event Action<string> OnStoryNodeChanged;
         public event Action OnConversationEnded;
 
         public string NpcDisplayName => _npc.DisplayName;
 
         public ChatController(
-            PlayerState playerState, ILLMProvider provider, NPCDefinition npc,
-            string worldDescription, StoryGraph storyGraph)
+            PlayerState playerState, ILLMProvider provider, NPCDefinition npc, string worldDescription)
         {
             _playerState = playerState;
             _provider = provider;
             _npc = npc;
             _worldDescription = worldDescription;
-            _storyGraph = storyGraph;
         }
 
         public void BeginAdventure()
         {
-            var startNode = _storyGraph.GetNode(_storyGraph.StartNodeId);
-            _playerState.SetStoryNode(_npc.NpcId, _storyGraph.StartNodeId);
-
-            var systemPrompt = SystemPromptBuilder.BuildOpening(_npc, _worldDescription, startNode);
+            var systemPrompt = SystemPromptBuilder.BuildOpening(_npc, _worldDescription);
             // Gemini API는 contents가 빈 배열이면 요청을 거부하므로, 저장되지 않는 시작 트리거 턴 하나를 심어준다.
             var kickoff = new System.Collections.Generic.List<ChatMessage>
             {
@@ -66,6 +58,8 @@ namespace TextingRPG.UI
                         _playerState.AppendMessage(_npc.NpcId, npcMessage);
                         OnMessageAdded?.Invoke(npcMessage);
                     }
+
+                    _playerState.SetSummary(_npc.NpcId, response.Summary);
                 },
                 onError: error => OnError?.Invoke(error)
             );
@@ -83,17 +77,14 @@ namespace TextingRPG.UI
             int turnCount = _playerState.GetTurnCount(_npc.NpcId);
             bool isFinalTurn = turnCount >= MaxTurns;
 
-            var currentNodeId = _playerState.GetStoryNode(_npc.NpcId) ?? _storyGraph.StartNodeId;
-            _playerState.SetStoryNode(_npc.NpcId, currentNodeId);
-            var currentNode = _storyGraph.GetNode(currentNodeId);
-
             string endingHint = "";
             if (isFinalTurn)
                 endingHint = "이번이 마지막 턴이다. 지금까지의 대화 흐름을 바탕으로 이야기를 자연스럽고 확실하게 마무리해라.";
             else if (turnCount >= WrapUpTurnThreshold)
                 endingHint = "이야기가 슬슬 마무리를 향해 가야 한다. 남은 대화 안에서 자연스럽게 정리할 준비를 해라.";
 
-            var systemPrompt = SystemPromptBuilder.Build(_npc, _worldDescription, currentNode, endingHint);
+            var summary = _playerState.GetSummary(_npc.NpcId);
+            var systemPrompt = SystemPromptBuilder.Build(_npc, _worldDescription, summary, endingHint);
             var recentHistory = HistoryWindow.TakeRecent(_playerState.GetHistory(_npc.NpcId), MaxHistoryMessages);
             var context = new ConversationContext { SystemPrompt = systemPrompt, History = recentHistory };
 
@@ -112,14 +103,8 @@ namespace TextingRPG.UI
                         OnMessageAdded?.Invoke(npcMessage);
                     }
 
+                    _playerState.SetSummary(_npc.NpcId, response.Summary);
                     EffectApplier.Apply(_playerState, _npc.NpcId, response.Effects);
-
-                    var nextNodeId = StoryProgression.Resolve(currentNode, response.Tags, out _);
-                    if (nextNodeId != currentNodeId)
-                    {
-                        _playerState.SetStoryNode(_npc.NpcId, nextNodeId);
-                        OnStoryNodeChanged?.Invoke(nextNodeId);
-                    }
 
                     if (isFinalTurn)
                     {
