@@ -20,29 +20,42 @@ namespace TextingRPG.UI
         [SerializeField] NPCDefinition npc;
         [SerializeField] StoryGraph storyGraph;
         [SerializeField] string worldDescription = "중세 판타지 세계, 변방의 작은 마을. 플레이어는 이제 막 마을에 도착한 여행자다.";
+        [SerializeField] KeywordIntroPanel keywordIntroPanel;
+        [SerializeField] GameObject chatUIRoot;
 
         private ChatController _controller;
         private float _lastSendTime = float.NegativeInfinity;
+        private string _apiKey;
 
         private void Start()
         {
-            var apiKey = LocalSecrets.GetGeminiApiKey();
-            if (string.IsNullOrEmpty(apiKey))
+            _apiKey = LocalSecrets.GetGeminiApiKey();
+            if (string.IsNullOrEmpty(_apiKey))
             {
                 return;
             }
 
+            chatUIRoot.SetActive(false);
+            keywordIntroPanel.OnKeywordsConfirmed += HandleKeywordsConfirmed;
+        }
+
+        private void HandleKeywordsConfirmed(string[] keywords)
+        {
+            var finalWorldDescription = worldDescription + "\n\n[이번 모험의 키워드] " + string.Join(", ", keywords);
+
             var playerState = new PlayerState();
+            ILLMProvider provider = new GeminiProvider(_apiKey, geminiModel);
 
-            ILLMProvider provider = new GeminiProvider(apiKey, geminiModel);
-
-            _controller = new ChatController(playerState, provider, npc, worldDescription, storyGraph);
+            _controller = new ChatController(playerState, provider, npc, finalWorldDescription, storyGraph);
             _controller.OnError += HandleError;
+            _controller.OnConversationEnded += HandleConversationEnded;
             chatBubbleListView.Bind(_controller);
             chatBubbleListView.OnMessagePlaybackComplete += HandleMessagePlaybackComplete;
 
             sendButton.onClick.AddListener(SendCurrentInput);
             inputField.onSubmit.AddListener(_ => SendCurrentInput());
+
+            chatUIRoot.SetActive(true);
         }
 
         private void SendCurrentInput()
@@ -66,6 +79,13 @@ namespace TextingRPG.UI
         {
             Debug.LogError($"Chat error: {error}");
             EnableSendButtonRespectingCooldown();
+        }
+
+        private void HandleConversationEnded()
+        {
+            CancelInvoke(nameof(EnableSendButtonNow));
+            sendButton.interactable = false;
+            inputField.interactable = false;
         }
 
         private void EnableSendButtonRespectingCooldown()
