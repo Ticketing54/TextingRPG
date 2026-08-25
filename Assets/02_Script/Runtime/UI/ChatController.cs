@@ -38,6 +38,33 @@ namespace TextingRPG.UI
             _storyGraph = storyGraph;
         }
 
+        public void BeginAdventure()
+        {
+            var startNode = _storyGraph.GetNode(_storyGraph.StartNodeId);
+            _playerState.SetStoryNode(_npc.NpcId, _storyGraph.StartNodeId);
+
+            var systemPrompt = SystemPromptBuilder.BuildOpening(_npc, _worldDescription, startNode);
+            var context = new ConversationContext { SystemPrompt = systemPrompt, History = new System.Collections.Generic.List<ChatMessage>() };
+
+            _provider.SendMessage(
+                context,
+                onSuccess: response =>
+                {
+                    var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
+                    _playerState.AppendMessage(_npc.NpcId, narrationMessage);
+                    OnMessageAdded?.Invoke(narrationMessage);
+
+                    if (!string.IsNullOrEmpty(response.NpcLine))
+                    {
+                        var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
+                        _playerState.AppendMessage(_npc.NpcId, npcMessage);
+                        OnMessageAdded?.Invoke(npcMessage);
+                    }
+                },
+                onError: error => OnError?.Invoke(error)
+            );
+        }
+
         public void SendPlayerMessage(string text)
         {
             if (_conversationEnded) return;

@@ -253,5 +253,67 @@ namespace TextingRPG.Tests
 
             Assert.AreEqual(historyCountAtEnd, state.GetHistory("npc_a").Count);
         }
+
+        [Test]
+        public void BeginAdventure_SetsStoryNodeToGraphStartNode()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다." } };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            controller.BeginAdventure();
+
+            Assert.AreEqual("intro", state.GetStoryNode("npc_a"));
+        }
+
+        [Test]
+        public void BeginAdventure_UsesOpeningSystemPromptWithNoHistory()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다." } };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            controller.BeginAdventure();
+
+            StringAssert.Contains("무엇을 하면 좋을지", provider.LastContext.SystemPrompt);
+            Assert.AreEqual(0, provider.LastContext.History.Count);
+        }
+
+        [Test]
+        public void BeginAdventure_OnSuccess_AddsNarrationAndNpcLineWithoutIncrementingTurnCount()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider
+            {
+                NextResponse = new LLMResponse { Narration = "당신은 상점 앞에 서 있다.", NpcLine = "어서오세요." }
+            };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            controller.BeginAdventure();
+
+            var history = state.GetHistory("npc_a");
+            Assert.AreEqual(2, history.Count);
+            Assert.AreEqual(ChatSender.Narration, history[0].Sender);
+            Assert.AreEqual("당신은 상점 앞에 서 있다.", history[0].Text);
+            Assert.AreEqual(ChatSender.Npc, history[1].Sender);
+            Assert.AreEqual("어서오세요.", history[1].Text);
+            Assert.AreEqual(0, state.GetTurnCount("npc_a"));
+        }
+
+        [Test]
+        public void BeginAdventure_OnError_FiresOnError()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextError = "network down" };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            string capturedError = null;
+            controller.OnError += e => capturedError = e;
+
+            controller.BeginAdventure();
+
+            Assert.AreEqual("network down", capturedError);
+            Assert.AreEqual(0, state.GetHistory("npc_a").Count);
+        }
     }
 }
