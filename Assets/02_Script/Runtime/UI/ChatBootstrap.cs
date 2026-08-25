@@ -15,7 +15,7 @@ namespace TextingRPG.UI
         [SerializeField] ChatBubbleListView chatBubbleListView;
         [SerializeField] TMP_InputField inputField;
         [SerializeField] Button sendButton;
-        [SerializeField] string geminiModel = "gemini-3.6-flash";
+        [SerializeField] string geminiModel = "gemini-3.5-flash-lite"; // thinking 토큰 없이 응답하고, 3.6보다 무료 한도가 넉넉함
         [SerializeField] float minSecondsBetweenSends = 4f; // Gemini 무료 티어 RPM(분당 15회) 한도에 맞춘 최소 전송 간격
         [SerializeField] NPCDefinition npc;
         [SerializeField] StoryGraph storyGraph;

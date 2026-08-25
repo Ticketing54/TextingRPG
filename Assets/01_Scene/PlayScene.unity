@@ -722,7 +722,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: c89530022d7f19545af000dcd11aa344, type: 2}
     - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: geminiModel
-      value: gemini-3.6-flash
+      value: gemini-3.5-flash-lite
       objectReference: {fileID: 0}
     - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: chatBubbleListView
