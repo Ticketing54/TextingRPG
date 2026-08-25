@@ -9,6 +9,8 @@ namespace TextingRPG.UI
     public class ChatController
     {
         private const int MaxHistoryMessages = 8;
+        private const int WrapUpTurnThreshold = 80;
+        private const int MaxTurns = 100;
 
         private readonly PlayerState _playerState;
         private readonly ILLMProvider _provider;
@@ -16,9 +18,12 @@ namespace TextingRPG.UI
         private readonly string _worldDescription;
         private readonly StoryGraph _storyGraph;
 
+        private bool _conversationEnded;
+
         public event Action<ChatMessage> OnMessageAdded;
         public event Action<string> OnError;
         public event Action<string> OnStoryNodeChanged;
+        public event Action OnConversationEnded;
 
         public string NpcDisplayName => _npc.DisplayName;
 
@@ -35,15 +40,27 @@ namespace TextingRPG.UI
 
         public void SendPlayerMessage(string text)
         {
+            if (_conversationEnded) return;
+
             ChatMessage playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
             _playerState.AppendMessage(_npc.NpcId, playerMessage);
             OnMessageAdded?.Invoke(playerMessage);
+
+            _playerState.IncrementTurnCount(_npc.NpcId);
+            int turnCount = _playerState.GetTurnCount(_npc.NpcId);
+            bool isFinalTurn = turnCount >= MaxTurns;
 
             var currentNodeId = _playerState.GetStoryNode(_npc.NpcId) ?? _storyGraph.StartNodeId;
             _playerState.SetStoryNode(_npc.NpcId, currentNodeId);
             var currentNode = _storyGraph.GetNode(currentNodeId);
 
-            var systemPrompt = SystemPromptBuilder.Build(_npc, _worldDescription, currentNode);
+            string endingHint = "";
+            if (isFinalTurn)
+                endingHint = "이번이 마지막 턴이다. 지금까지의 대화 흐름을 바탕으로 이야기를 자연스럽고 확실하게 마무리해라.";
+            else if (turnCount >= WrapUpTurnThreshold)
+                endingHint = "이야기가 슬슬 마무리를 향해 가야 한다. 남은 대화 안에서 자연스럽게 정리할 준비를 해라.";
+
+            var systemPrompt = SystemPromptBuilder.Build(_npc, _worldDescription, currentNode, endingHint);
             var recentHistory = HistoryWindow.TakeRecent(_playerState.GetHistory(_npc.NpcId), MaxHistoryMessages);
             var context = new ConversationContext { SystemPrompt = systemPrompt, History = recentHistory };
 
@@ -69,6 +86,12 @@ namespace TextingRPG.UI
                     {
                         _playerState.SetStoryNode(_npc.NpcId, nextNodeId);
                         OnStoryNodeChanged?.Invoke(nextNodeId);
+                    }
+
+                    if (isFinalTurn)
+                    {
+                        _conversationEnded = true;
+                        OnConversationEnded?.Invoke();
                     }
                 },
                 onError: error => OnError?.Invoke(error)

@@ -185,5 +185,73 @@ namespace TextingRPG.Tests
             Assert.AreEqual(ChatSender.Npc, history[2].Sender);
             Assert.AreEqual("어서오세요!", history[2].Text);
         }
+
+        [Test]
+        public void SendPlayerMessage_BeforeWrapUpThreshold_SystemPromptHasNoEndingHint()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            for (int i = 0; i < 79; i++)
+            {
+                controller.SendPlayerMessage($"메시지 {i}");
+            }
+
+            StringAssert.DoesNotContain("마무리", provider.LastContext.SystemPrompt);
+        }
+
+        [Test]
+        public void SendPlayerMessage_AtWrapUpThreshold_SystemPromptIncludesWrapUpHint()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            for (int i = 0; i < 80; i++)
+            {
+                controller.SendPlayerMessage($"메시지 {i}");
+            }
+
+            StringAssert.Contains("마무리를 향해", provider.LastContext.SystemPrompt);
+        }
+
+        [Test]
+        public void SendPlayerMessage_AtMaxTurns_SystemPromptIncludesFinalTurnHintAndFiresOnConversationEnded()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            bool ended = false;
+            controller.OnConversationEnded += () => ended = true;
+
+            for (int i = 0; i < 100; i++)
+            {
+                controller.SendPlayerMessage($"메시지 {i}");
+            }
+
+            StringAssert.Contains("마지막 턴", provider.LastContext.SystemPrompt);
+            Assert.IsTrue(ended);
+        }
+
+        [Test]
+        public void SendPlayerMessage_AfterConversationEnded_DoesNothing()
+        {
+            var state = new PlayerState();
+            var provider = new MockLLMProvider { NextResponse = new LLMResponse { Narration = "ok" } };
+            var controller = new ChatController(state, provider, MakeNpc(), "세계관", MakeGraph());
+
+            for (int i = 0; i < 100; i++)
+            {
+                controller.SendPlayerMessage($"메시지 {i}");
+            }
+
+            int historyCountAtEnd = state.GetHistory("npc_a").Count;
+
+            controller.SendPlayerMessage("한 번 더");
+
+            Assert.AreEqual(historyCountAtEnd, state.GetHistory("npc_a").Count);
+        }
     }
 }
