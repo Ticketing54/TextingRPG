@@ -56,6 +56,14 @@ namespace TextingRPG.Tests
         }
 
         [Test]
+        public void Build_InstructsIgnoringPlayerAssertedOutcomes()
+        {
+            var prompt = SystemPromptBuilder.Build("세계관", "요약");
+
+            StringAssert.Contains("그대로 사실로 받아들이지 말고", prompt);
+        }
+
+        [Test]
         public void Build_InstructsSummaryLengthCap()
         {
             var prompt = SystemPromptBuilder.Build("세계관", "요약");
