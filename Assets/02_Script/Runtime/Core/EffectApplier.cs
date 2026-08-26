@@ -8,7 +8,7 @@ namespace TextingRPG.Core
     {
         private const float MaxAbsDelta = 3f;
 
-        public static void Apply(PlayerState state, string npcId, IEnumerable<LLMEffect> effects)
+        public static void Apply(PlayerState state, IEnumerable<LLMEffect> effects)
         {
             foreach (var effect in effects)
             {
@@ -17,8 +17,8 @@ namespace TextingRPG.Core
                 switch (effect.Type)
                 {
                     case "relationship":
-                        int current = state.GetRelationship(npcId);
-                        state.SetRelationship(npcId, current + Mathf.RoundToInt(clampedDelta));
+                        int current = state.GetRelationship(effect.Target);
+                        state.SetRelationship(effect.Target, current + Mathf.RoundToInt(clampedDelta));
                         break;
 
                     case "stat":

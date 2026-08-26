@@ -6,45 +6,30 @@ namespace TextingRPG.Core
     {
         private readonly Dictionary<string, float> _stats = new Dictionary<string, float>();
         private readonly Dictionary<string, int> _relationships = new Dictionary<string, int>();
-        private readonly Dictionary<string, List<ChatMessage>> _conversationHistories =
-            new Dictionary<string, List<ChatMessage>>();
-        private readonly Dictionary<string, string> _summaries = new Dictionary<string, string>();
-        private readonly Dictionary<string, int> _turnCounts = new Dictionary<string, int>();
+        private readonly List<ChatMessage> _history = new List<ChatMessage>();
+        private string _summary = "";
+        private int _turnCount;
 
-        public int GetRelationship(string npcId) =>
-            _relationships.TryGetValue(npcId, out var value) ? value : 0;
+        public int GetRelationship(string target) =>
+            _relationships.TryGetValue(target, out var value) ? value : 0;
 
-        public void SetRelationship(string npcId, int value) => _relationships[npcId] = value;
+        public void SetRelationship(string target, int value) => _relationships[target] = value;
 
         public float GetStat(string statId) =>
             _stats.TryGetValue(statId, out var value) ? value : 0f;
 
         public void SetStat(string statId, float value) => _stats[statId] = value;
 
-        public List<ChatMessage> GetHistory(string npcId)
-        {
-            if (!_conversationHistories.TryGetValue(npcId, out var history))
-            {
-                history = new List<ChatMessage>();
-                _conversationHistories[npcId] = history;
-            }
-            return history;
-        }
+        public List<ChatMessage> GetHistory() => _history;
 
-        public void AppendMessage(string npcId, ChatMessage message)
-        {
-            GetHistory(npcId).Add(message);
-        }
+        public void AppendMessage(ChatMessage message) => _history.Add(message);
 
-        public string GetSummary(string npcId) =>
-            _summaries.TryGetValue(npcId, out var summary) ? summary : "";
+        public string GetSummary() => _summary;
 
-        public void SetSummary(string npcId, string summary) => _summaries[npcId] = summary;
+        public void SetSummary(string summary) => _summary = summary;
 
-        public int GetTurnCount(string npcId) =>
-            _turnCounts.TryGetValue(npcId, out var value) ? value : 0;
+        public int GetTurnCount() => _turnCount;
 
-        public void IncrementTurnCount(string npcId) =>
-            _turnCounts[npcId] = GetTurnCount(npcId) + 1;
+        public void IncrementTurnCount() => _turnCount++;
     }
 }

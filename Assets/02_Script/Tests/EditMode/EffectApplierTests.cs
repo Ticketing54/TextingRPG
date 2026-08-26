@@ -17,7 +17,7 @@ namespace TextingRPG.Tests
                 new LLMEffect { Type = "relationship", Target = "npc_a", Delta = 2f }
             };
 
-            EffectApplier.Apply(state, "npc_a", effects);
+            EffectApplier.Apply(state, effects);
 
             Assert.AreEqual(2, state.GetRelationship("npc_a"));
         }
@@ -31,7 +31,7 @@ namespace TextingRPG.Tests
                 new LLMEffect { Type = "relationship", Target = "npc_a", Delta = 999f }
             };
 
-            EffectApplier.Apply(state, "npc_a", effects);
+            EffectApplier.Apply(state, effects);
 
             Assert.AreEqual(3, state.GetRelationship("npc_a"));
         }
@@ -45,7 +45,7 @@ namespace TextingRPG.Tests
                 new LLMEffect { Type = "relationship", Target = "npc_a", Delta = -999f }
             };
 
-            EffectApplier.Apply(state, "npc_a", effects);
+            EffectApplier.Apply(state, effects);
 
             Assert.AreEqual(-3, state.GetRelationship("npc_a"));
         }
@@ -59,7 +59,7 @@ namespace TextingRPG.Tests
                 new LLMEffect { Type = "stat", Target = "courage", Delta = 1.5f }
             };
 
-            EffectApplier.Apply(state, "npc_a", effects);
+            EffectApplier.Apply(state, effects);
 
             Assert.AreEqual(1.5f, state.GetStat("courage"));
         }
@@ -74,7 +74,7 @@ namespace TextingRPG.Tests
             };
 
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex(".*teleport.*"));
-            EffectApplier.Apply(state, "npc_a", effects);
+            EffectApplier.Apply(state, effects);
 
             Assert.AreEqual(0, state.GetRelationship("npc_a"));
         }

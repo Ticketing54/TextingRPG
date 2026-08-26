@@ -14,8 +14,8 @@ namespace TextingRPG.UI
 
         private readonly PlayerState _playerState;
         private readonly ILLMProvider _provider;
-        private readonly NPCDefinition _npc;
         private readonly string _worldDescription;
+        private readonly EventChanceConfig _eventConfig;
 
         private bool _conversationEnded;
 
@@ -23,20 +23,18 @@ namespace TextingRPG.UI
         public event Action<string> OnError;
         public event Action OnConversationEnded;
 
-        public string NpcDisplayName => _npc.DisplayName;
-
         public ChatController(
-            PlayerState playerState, ILLMProvider provider, NPCDefinition npc, string worldDescription)
+            PlayerState playerState, ILLMProvider provider, string worldDescription, EventChanceConfig eventConfig)
         {
             _playerState = playerState;
             _provider = provider;
-            _npc = npc;
             _worldDescription = worldDescription;
+            _eventConfig = eventConfig;
         }
 
         public void BeginAdventure()
         {
-            var systemPrompt = SystemPromptBuilder.BuildOpening(_npc, _worldDescription);
+            var systemPrompt = SystemPromptBuilder.BuildOpening(_worldDescription);
             // Gemini API는 contents가 빈 배열이면 요청을 거부하므로, 저장되지 않는 시작 트리거 턴 하나를 심어준다.
             var kickoff = new System.Collections.Generic.List<ChatMessage>
             {
@@ -49,17 +47,17 @@ namespace TextingRPG.UI
                 onSuccess: response =>
                 {
                     var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
-                    _playerState.AppendMessage(_npc.NpcId, narrationMessage);
+                    _playerState.AppendMessage(narrationMessage);
                     OnMessageAdded?.Invoke(narrationMessage);
 
                     if (!string.IsNullOrEmpty(response.NpcLine))
                     {
                         var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
-                        _playerState.AppendMessage(_npc.NpcId, npcMessage);
+                        _playerState.AppendMessage(npcMessage);
                         OnMessageAdded?.Invoke(npcMessage);
                     }
 
-                    _playerState.SetSummary(_npc.NpcId, response.Summary);
+                    _playerState.SetSummary(response.Summary);
                 },
                 onError: error => OnError?.Invoke(error)
             );
@@ -70,11 +68,11 @@ namespace TextingRPG.UI
             if (_conversationEnded) return;
 
             ChatMessage playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
-            _playerState.AppendMessage(_npc.NpcId, playerMessage);
+            _playerState.AppendMessage(playerMessage);
             OnMessageAdded?.Invoke(playerMessage);
 
-            _playerState.IncrementTurnCount(_npc.NpcId);
-            int turnCount = _playerState.GetTurnCount(_npc.NpcId);
+            _playerState.IncrementTurnCount();
+            int turnCount = _playerState.GetTurnCount();
             bool isFinalTurn = turnCount >= MaxTurns;
 
             string endingHint = "";
@@ -83,9 +81,13 @@ namespace TextingRPG.UI
             else if (turnCount >= WrapUpTurnThreshold)
                 endingHint = "이야기가 슬슬 마무리를 향해 가야 한다. 남은 대화 안에서 자연스럽게 정리할 준비를 해라.";
 
-            var summary = _playerState.GetSummary(_npc.NpcId);
-            var systemPrompt = SystemPromptBuilder.Build(_npc, _worldDescription, summary, endingHint);
-            var recentHistory = HistoryWindow.TakeRecent(_playerState.GetHistory(_npc.NpcId), MaxHistoryMessages);
+            var eventCategory = EventRoller.Roll(_eventConfig);
+            var eventHint = EventHintText.For(eventCategory);
+            var extraHint = string.IsNullOrEmpty(eventHint) ? endingHint : (endingHint + "\n" + eventHint).Trim();
+
+            var summary = _playerState.GetSummary();
+            var systemPrompt = SystemPromptBuilder.Build(_worldDescription, summary, extraHint);
+            var recentHistory = HistoryWindow.TakeRecent(_playerState.GetHistory(), MaxHistoryMessages);
             var context = new ConversationContext { SystemPrompt = systemPrompt, History = recentHistory };
 
             _provider.SendMessage(
@@ -93,20 +95,20 @@ namespace TextingRPG.UI
                 onSuccess: response =>
                 {
                     var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
-                    _playerState.AppendMessage(_npc.NpcId, narrationMessage);
+                    _playerState.AppendMessage(narrationMessage);
                     OnMessageAdded?.Invoke(narrationMessage);
 
                     if (!string.IsNullOrEmpty(response.NpcLine))
                     {
                         var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
-                        _playerState.AppendMessage(_npc.NpcId, npcMessage);
+                        _playerState.AppendMessage(npcMessage);
                         OnMessageAdded?.Invoke(npcMessage);
                     }
 
-                    _playerState.SetSummary(_npc.NpcId, response.Summary);
-                    EffectApplier.Apply(_playerState, _npc.NpcId, response.Effects);
+                    _playerState.SetSummary(response.Summary);
+                    EffectApplier.Apply(_playerState, response.Effects);
 
-                    if (isFinalTurn)
+                    if (isFinalTurn || response.IsEnding)
                     {
                         _conversationEnded = true;
                         OnConversationEnded?.Invoke();

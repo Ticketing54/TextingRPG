@@ -1,6 +1,5 @@
 using TextingRPG.Core;
 using TextingRPG.LLM;
-using TextingRPG.NPC;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,7 +15,7 @@ namespace TextingRPG.UI
         [SerializeField] Button sendButton;
         [SerializeField] string geminiModel = "gemini-3.5-flash-lite"; // thinking 토큰 없이 응답하고, 3.6보다 무료 한도가 넉넉함
         [SerializeField] float minSecondsBetweenSends = 4f; // Gemini 무료 티어 RPM(분당 15회) 한도에 맞춘 최소 전송 간격
-        [SerializeField] NPCDefinition npc;
+        [SerializeField] EventChanceConfig eventChanceConfig;
         [SerializeField] string worldDescription = "중세 판타지 세계, 변방의 작은 마을. 플레이어는 이제 막 마을에 도착한 여행자다.";
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
         [SerializeField] GameObject chatUIRoot;
@@ -44,7 +43,7 @@ namespace TextingRPG.UI
             var playerState = new PlayerState();
             ILLMProvider provider = new GeminiProvider(_apiKey, geminiModel);
 
-            _controller = new ChatController(playerState, provider, npc, finalWorldDescription);
+            _controller = new ChatController(playerState, provider, finalWorldDescription, eventChanceConfig);
             _controller.OnError += HandleError;
             _controller.OnConversationEnded += HandleConversationEnded;
             chatBubbleListView.Bind(_controller);
