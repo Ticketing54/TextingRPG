@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TextingRPG.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,8 +9,7 @@ namespace TextingRPG.UI
 {
     public class KeywordIntroPanel : MonoBehaviour
     {
-        [SerializeField] string[] availableKeywords =
-            { "안개", "폭풍우", "낡은 지도", "은화", "늑대 울음", "별빛" };
+        [SerializeField] KeywordSet keywordSet;
         [SerializeField] Transform keywordButtonContainer;
         [SerializeField] Button keywordButtonPrefab;
         [SerializeField] Button startButton;
@@ -21,7 +21,7 @@ namespace TextingRPG.UI
 
         private void Awake()
         {
-            foreach (var keyword in availableKeywords)
+            foreach (var keyword in keywordSet.Keywords)
             {
                 var button = Instantiate(keywordButtonPrefab, keywordButtonContainer);
                 button.GetComponentInChildren<TMP_Text>().text = keyword;

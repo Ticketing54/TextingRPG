@@ -1392,7 +1392,6 @@ MonoBehaviour:
   geminiModel: gemini-3.5-flash-lite
   minSecondsBetweenSends: 4
   npc: {fileID: 0}
-  storyGraph: {fileID: 0}
   worldDescription: "\uC911\uC138 \uD310\uD0C0\uC9C0 \uC138\uACC4, \uBCC0\uBC29\uC758
     \uC791\uC740 \uB9C8\uC744. \uD50C\uB808\uC774\uC5B4\uB294 \uC774\uC81C \uB9C9
     \uB9C8\uC744\uC5D0 \uB3C4\uCC29\uD55C \uC5EC\uD589\uC790\uB2E4."
@@ -1823,13 +1822,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d28942f64945a4c4cb49fcb78acf82e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TextingRPG.Runtime::TextingRPG.UI.KeywordIntroPanel
-  availableKeywords:
-  - "\uC548\uAC1C"
-  - "\uD3ED\uD48D\uC6B0"
-  - "\uB0A1\uC740 \uC9C0\uB3C4"
-  - "\uC740\uD654"
-  - "\uB291\uB300 \uC6B8\uC74C"
-  - "\uBCC4\uBE5B"
+  keywordSet: {fileID: 11400000, guid: 2727952d9ca17b74c911349f58fee1c9, type: 2}
   keywordButtonContainer: {fileID: 7491607820284243381}
   keywordButtonPrefab: {fileID: 3766855446194602226, guid: 905ff54ec8543844abb32d56511a2b8f, type: 3}
   startButton: {fileID: 4311887601497297638}
