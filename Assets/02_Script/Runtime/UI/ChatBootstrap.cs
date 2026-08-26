@@ -82,6 +82,7 @@ namespace TextingRPG.UI
 
         private void HandleConversationEnded()
         {
+            Debug.Log("이야기가 종료되었습니다.");
             CancelInvoke(nameof(EnableSendButtonNow));
             sendButton.interactable = false;
             inputField.interactable = false;
