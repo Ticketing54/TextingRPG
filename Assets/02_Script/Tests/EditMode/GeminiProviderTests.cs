@@ -15,7 +15,7 @@ namespace TextingRPG.Tests
                     ""content"": {
                         ""role"": ""model"",
                         ""parts"": [
-                            { ""text"": ""{\""narration\"":\""게르트가 손님을 맞이한다.\"",\""npcLine\"":\""어서오세요, 손님!\"",\""summary\"":\""플레이어가 여관에 들어와 인사를 나눴다.\"",\""effects\"":[{\""type\"":\""relationship\"",\""target\"":\""npc_a\"",\""delta\"":1.0}]}"" }
+                            { ""text"": ""{\""narration\"":\""게르트가 손님을 맞이한다.\"",\""npcLine\"":\""어서오세요, 손님!\"",\""summary\"":\""플레이어가 여관에 들어와 인사를 나눴다.\"",\""isEnding\"":false,\""effects\"":[{\""type\"":\""relationship\"",\""target\"":\""npc_a\"",\""delta\"":1.0}]}"" }
                         ]
                     }
                 }
@@ -28,7 +28,20 @@ namespace TextingRPG.Tests
                     ""content"": {
                         ""role"": ""model"",
                         ""parts"": [
-                            { ""text"": ""{\""narration\"":\""문이 닫힌다.\"",\""npcLine\"":\""\"",\""summary\"":\""\"",\""effects\"":[]}"" }
+                            { ""text"": ""{\""narration\"":\""문이 닫힌다.\"",\""npcLine\"":\""\"",\""summary\"":\""\"",\""isEnding\"":false,\""effects\"":[]}"" }
+                        ]
+                    }
+                }
+            ]
+        }";
+
+        private const string SampleGeminiResponseIsEndingTrue = @"{
+            ""candidates"": [
+                {
+                    ""content"": {
+                        ""role"": ""model"",
+                        ""parts"": [
+                            { ""text"": ""{\""narration\"":\""여행자가 쓰러진다.\"",\""npcLine\"":\""\"",\""summary\"":\""여행자가 사망했다.\"",\""isEnding\"":true,\""effects\"":[]}"" }
                         ]
                     }
                 }
@@ -36,13 +49,14 @@ namespace TextingRPG.Tests
         }";
 
         [Test]
-        public void ParseResponse_ExtractsNarrationNpcLineSummaryAndEffectsFromNestedJsonText()
+        public void ParseResponse_ExtractsNarrationNpcLineSummaryIsEndingAndEffectsFromNestedJsonText()
         {
             var response = GeminiProvider.ParseResponse(SampleGeminiResponse);
 
             Assert.AreEqual("게르트가 손님을 맞이한다.", response.Narration);
             Assert.AreEqual("어서오세요, 손님!", response.NpcLine);
             Assert.AreEqual("플레이어가 여관에 들어와 인사를 나눴다.", response.Summary);
+            Assert.IsFalse(response.IsEnding);
             Assert.AreEqual(1, response.Effects.Count);
             Assert.AreEqual("relationship", response.Effects[0].Type);
             Assert.AreEqual("npc_a", response.Effects[0].Target);
@@ -57,6 +71,14 @@ namespace TextingRPG.Tests
             Assert.AreEqual("문이 닫힌다.", response.Narration);
             Assert.AreEqual("", response.NpcLine);
             Assert.AreEqual("", response.Summary);
+        }
+
+        [Test]
+        public void ParseResponse_IsEndingTrue_ReturnsTrue()
+        {
+            var response = GeminiProvider.ParseResponse(SampleGeminiResponseIsEndingTrue);
+
+            Assert.IsTrue(response.IsEnding);
         }
 
         [Test]
@@ -96,12 +118,14 @@ namespace TextingRPG.Tests
             Assert.IsTrue(schemaProperties.ContainsKey("narration"));
             Assert.IsTrue(schemaProperties.ContainsKey("npcLine"));
             Assert.IsTrue(schemaProperties.ContainsKey("summary"));
+            Assert.IsTrue(schemaProperties.ContainsKey("isEnding"));
 
             var requiredFields = ((JArray)body["generationConfig"]["responseSchema"]["required"])
                 .Select(t => (string)t)
                 .ToList();
             CollectionAssert.Contains(requiredFields, "summary");
             CollectionAssert.Contains(requiredFields, "narration");
+            CollectionAssert.Contains(requiredFields, "isEnding");
             CollectionAssert.DoesNotContain(requiredFields, "npcLine");
         }
 

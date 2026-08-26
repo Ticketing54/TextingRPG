@@ -107,9 +107,10 @@ namespace TextingRPG.LLM
                     ["narration"] = new JObject { ["type"] = "STRING" },
                     ["npcLine"] = new JObject { ["type"] = "STRING" },
                     ["summary"] = new JObject { ["type"] = "STRING" },
+                    ["isEnding"] = new JObject { ["type"] = "BOOLEAN" },
                     ["effects"] = new JObject { ["type"] = "ARRAY", ["items"] = effectSchema }
                 },
-                ["required"] = new JArray("narration", "summary", "effects")
+                ["required"] = new JArray("narration", "summary", "isEnding", "effects")
             };
 
             var body = new JObject
@@ -150,6 +151,7 @@ namespace TextingRPG.LLM
                 Narration = (string)payload["narration"],
                 NpcLine = (string)payload["npcLine"] ?? "",
                 Summary = (string)payload["summary"] ?? "",
+                IsEnding = (bool?)payload["isEnding"] ?? false,
                 Effects = new List<LLMEffect>()
             };
 

@@ -8,6 +8,7 @@ namespace TextingRPG.LLM
         public string Narration;
         public string NpcLine = "";
         public string Summary = "";
+        public bool IsEnding;
         public List<LLMEffect> Effects = new List<LLMEffect>();
     }
 }
