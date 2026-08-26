@@ -1391,7 +1391,7 @@ MonoBehaviour:
   sendButton: {fileID: 8484762979112379411}
   geminiModel: gemini-3.5-flash-lite
   minSecondsBetweenSends: 4
-  npc: {fileID: 0}
+  eventChanceConfig: {fileID: 11400000, guid: 48df4f8ec8d0e9649b27846e3111933d, type: 2}
   worldDescription: "\uC911\uC138 \uD310\uD0C0\uC9C0 \uC138\uACC4, \uBCC0\uBC29\uC758
     \uC791\uC740 \uB9C8\uC744. \uD50C\uB808\uC774\uC5B4\uB294 \uC774\uC81C \uB9C9
     \uB9C8\uC744\uC5D0 \uB3C4\uCC29\uD55C \uC5EC\uD589\uC790\uB2E4."
