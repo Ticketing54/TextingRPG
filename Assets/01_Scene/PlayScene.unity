@@ -368,7 +368,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7293739915721448469, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
   m_PrefabInstance: {fileID: 3561896938900414265}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1155415739}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06fc0aa02fcdd2e419f35ef3317a0be3, type: 3}
@@ -458,6 +458,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1155415739 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5326634166484988771, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+  m_PrefabInstance: {fileID: 3561896938900414265}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1155415741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1155415739}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe75f617f2644c4699b9b9f6230b976, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TextingRPG.Runtime::TextingRPG.UI.ChatInputView
+  inputField: {fileID: 1770972515}
+  sendButton: {fileID: 1793351971}
+  chatBubbleListView: {fileID: 540020519}
 --- !u!1 &1232649300
 GameObject:
   m_ObjectHideFlags: 0
@@ -537,6 +557,82 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1484566961
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1484566963}
+  - component: {fileID: 1484566962}
+  m_Layer: 0
+  m_Name: DataManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1484566962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1484566961}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 076e76a5d811f3e4899ed04116a98957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TextingRPG.Runtime::TextingRPG.NPC.DataManager
+  storyOutline:
+    Title: 
+    WorldSetting: 
+    KeyCharacters: []
+    KeyEvents: []
+  memory:
+    importantFact: []
+  conversation:
+    currentChat: 
+    allChat: []
+--- !u!4 &1484566963
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1484566961}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1770972515 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9037434327936400772, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+  m_PrefabInstance: {fileID: 3561896938900414265}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
+--- !u!114 &1793351971 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8484762979112379411, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+  m_PrefabInstance: {fileID: 3561896938900414265}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!21 &1797593317
 Material:
   serializedVersion: 8
@@ -612,6 +708,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 494520570}
     m_Modifications:
+    - target: {fileID: 204751369612995595, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: m_Padding.m_Bottom
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1065234660278363693, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_fontMaterial
       value: 
@@ -626,11 +726,11 @@ PrefabInstance:
       objectReference: {fileID: 1797593317}
     - target: {fileID: 3458760026250969489, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3458760026250969489, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4599556173817953068, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_Pivot.x
@@ -725,6 +825,10 @@ PrefabInstance:
       value: gemini-3.5-flash-lite
       objectReference: {fileID: 0}
     - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: chatInputView
+      value: 
+      objectReference: {fileID: 1155415741}
+    - target: {fileID: 4803364194819993673, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: chatBubbleListView
       value: 
       objectReference: {fileID: 540020519}
@@ -742,12 +846,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5450767970953807406, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
       propertyPath: m_SizeDelta.y
+      value: 37
+      objectReference: {fileID: 0}
+    - target: {fileID: 8484762979112379411, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: m_Interactable
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8716609511663127576, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9037434327936400772, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      propertyPath: m_Interactable
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5326634166484988771, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1155415741}
   m_SourcePrefab: {fileID: 100100000, guid: b4c37aad08b3e8447a17958fda566b9c, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -757,3 +876,4 @@ SceneRoots:
   - {fileID: 619394802}
   - {fileID: 494520570}
   - {fileID: 1232649303}
+  - {fileID: 1484566963}

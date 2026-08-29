@@ -1,8 +1,6 @@
 using TextingRPG.Core;
 using TextingRPG.LLM;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace TextingRPG.UI
 {
@@ -11,17 +9,12 @@ namespace TextingRPG.UI
     public class ChatBootstrap : MonoBehaviour
     {
         [SerializeField] ChatBubbleListView chatBubbleListView;
-        [SerializeField] TMP_InputField inputField;
-        [SerializeField] Button sendButton;
+        [SerializeField] ChatInputView chatInputView;
         [SerializeField] string geminiModel = "gemini-3.5-flash-lite"; // thinking 토큰 없이 응답하고, 3.6보다 무료 한도가 넉넉함
-        [SerializeField] float minSecondsBetweenSends = 4f; // Gemini 무료 티어 RPM(분당 15회) 한도에 맞춘 최소 전송 간격
-        [SerializeField] EventChanceConfig eventChanceConfig;
-        [SerializeField] string worldDescription = "중세 판타지 세계, 변방의 작은 마을. 플레이어는 이제 막 마을에 도착한 여행자다.";
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
         [SerializeField] GameObject chatUIRoot;
 
         private ChatController _controller;
-        private float _lastSendTime = float.NegativeInfinity;
         private string _apiKey;
 
         private void Start()
@@ -38,63 +31,30 @@ namespace TextingRPG.UI
 
         private void HandleKeywordsConfirmed(string[] keywords)
         {
-            var finalWorldDescription = worldDescription + "\n\n[이번 모험의 키워드] " + string.Join(", ", keywords);
+            var finalWorldDescription =  "\n\n[이번 모험의 키워드] " + string.Join(", ", keywords);
 
-            var playerState = new PlayerState();
             ILLMProvider provider = new GeminiProvider(_apiKey, geminiModel);
 
-            _controller = new ChatController(playerState, provider, finalWorldDescription, eventChanceConfig);
+            _controller = new ChatController(provider, finalWorldDescription);
             _controller.OnError += HandleError;
             _controller.OnConversationEnded += HandleConversationEnded;
             chatBubbleListView.Bind(_controller);
-            chatBubbleListView.OnMessagePlaybackComplete += HandleMessagePlaybackComplete;
-
-            sendButton.onClick.AddListener(SendCurrentInput);
-            inputField.onSubmit.AddListener(_ => SendCurrentInput());
+            chatInputView.Bind(_controller);
 
             chatUIRoot.SetActive(true);
-            sendButton.interactable = false;
             _controller.BeginAdventure();
-        }
-
-        private void SendCurrentInput()
-        {
-            var text = inputField.text.Trim();
-            if (string.IsNullOrEmpty(text)) return;
-
-            inputField.text = string.Empty;
-            inputField.ActivateInputField();
-            sendButton.interactable = false;
-            _lastSendTime = Time.time;
-            _controller.SendPlayerMessage(text);
-        }
-
-        private void HandleMessagePlaybackComplete(ChatMessage message)
-        {
-            if (message.Sender != ChatSender.Player) EnableSendButtonRespectingCooldown();
         }
 
         private void HandleError(string error)
         {
             Debug.LogError($"Chat error: {error}");
-            EnableSendButtonRespectingCooldown();
+            chatBubbleListView.NotifyError();
         }
 
         private void HandleConversationEnded()
         {
             Debug.Log("이야기가 종료되었습니다.");
-            CancelInvoke(nameof(EnableSendButtonNow));
-            sendButton.interactable = false;
-            inputField.interactable = false;
+            chatBubbleListView.Lock();
         }
-
-        private void EnableSendButtonRespectingCooldown()
-        {
-            float remaining = minSecondsBetweenSends - (Time.time - _lastSendTime);
-            if (remaining <= 0f) sendButton.interactable = true;
-            else Invoke(nameof(EnableSendButtonNow), remaining);
-        }
-
-        private void EnableSendButtonNow() => sendButton.interactable = true;
     }
 }

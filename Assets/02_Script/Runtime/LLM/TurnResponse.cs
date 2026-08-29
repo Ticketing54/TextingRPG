@@ -3,12 +3,11 @@ using System.Collections.Generic;
 namespace TextingRPG.LLM
 {
     [System.Serializable]
-    public class LLMResponse
+    public class TurnResponse
     {
         public string Narration;
         public string NpcLine = "";
-        public string Summary = "";
+        public List<string> NewFacts = new List<string>();
         public bool IsEnding;
-        public List<LLMEffect> Effects = new List<LLMEffect>();
     }
 }

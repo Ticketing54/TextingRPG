@@ -1371,6 +1371,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TextingRPG.Runtime::TextingRPG.UI.ChatBubbleListView
   chatBubblePrefab: {fileID: 5180167043573136353, guid: ffcdfcea46292474d9518d803b941dcc, type: 3}
+  narrationBubblePrefab: {fileID: 5180167043573136353, guid: fd1fdc0e9a4881a4fbcb5fcd53a52a2e, type: 3}
   content: {fileID: 5450767970953807406}
   scrollRect: {fileID: 3339169438251517184}
   typingCharsPerSecondOverride: 20
@@ -1391,10 +1392,6 @@ MonoBehaviour:
   sendButton: {fileID: 8484762979112379411}
   geminiModel: gemini-3.5-flash-lite
   minSecondsBetweenSends: 4
-  eventChanceConfig: {fileID: 11400000, guid: 48df4f8ec8d0e9649b27846e3111933d, type: 2}
-  worldDescription: "\uC911\uC138 \uD310\uD0C0\uC9C0 \uC138\uACC4, \uBCC0\uBC29\uC758
-    \uC791\uC740 \uB9C8\uC744. \uD50C\uB808\uC774\uC5B4\uB294 \uC774\uC81C \uB9C9
-    \uB9C8\uC744\uC5D0 \uB3C4\uCC29\uD55C \uC5EC\uD589\uC790\uB2E4."
   keywordIntroPanel: {fileID: 3119196261535537317}
   chatUIRoot: {fileID: 618922039529907859}
 --- !u!1 &5878954344118000745

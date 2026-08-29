@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using TextingRPG.Core;
 using TextingRPG.LLM;
-using TextingRPG.NPC;
+using TextingRPG.Systems;
+using UnityEngine;
 
 namespace TextingRPG.UI
 {
@@ -12,10 +15,8 @@ namespace TextingRPG.UI
         private const int MaxTurns = 100;
         private const string OpeningKickoffMessage = "(모험이 시작된다.)";
 
-        private readonly PlayerState _playerState;
         private readonly ILLMProvider _provider;
         private readonly string _worldDescription;
-        private readonly EventChanceConfig _eventConfig;
 
         private bool _conversationEnded;
 
@@ -23,41 +24,33 @@ namespace TextingRPG.UI
         public event Action<string> OnError;
         public event Action OnConversationEnded;
 
-        public ChatController(
-            PlayerState playerState, ILLMProvider provider, string worldDescription, EventChanceConfig eventConfig)
+        public ChatController(ILLMProvider provider, string worldDescription)
         {
-            _playerState = playerState;
             _provider = provider;
             _worldDescription = worldDescription;
-            _eventConfig = eventConfig;
         }
 
         public void BeginAdventure()
         {
-            var systemPrompt = SystemPromptBuilder.BuildOpening(_worldDescription);
+            var systemPrompt = PromptBuilder.BuildStoryOutlinePrompt(_worldDescription);
             // Gemini API는 contents가 빈 배열이면 요청을 거부하므로, 저장되지 않는 시작 트리거 턴 하나를 심어준다.
-            var kickoff = new System.Collections.Generic.List<ChatMessage>
+            var kickoff = new List<ChatMessage>
             {
                 new ChatMessage(ChatSender.Player, OpeningKickoffMessage, DateTime.UtcNow.ToString("o"))
             };
             var context = new ConversationContext { SystemPrompt = systemPrompt, History = kickoff };
 
-            _provider.SendMessage(
+            _provider.GenerateStoryOutline(
                 context,
-                onSuccess: response =>
+                onSuccess: (outline, openingNarration) =>
                 {
-                    var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
-                    _playerState.AppendMessage(narrationMessage);
+                    DataManager.Instance.ApplyStoryOutline(outline);
+
+                    var narrationMessage = new ChatMessage(ChatSender.Narration, openingNarration, DateTime.UtcNow.ToString("o"));
+                    DataManager.Instance.AppendConversationMessage(narrationMessage);
                     OnMessageAdded?.Invoke(narrationMessage);
 
-                    if (!string.IsNullOrEmpty(response.NpcLine))
-                    {
-                        var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
-                        _playerState.AppendMessage(npcMessage);
-                        OnMessageAdded?.Invoke(npcMessage);
-                    }
-
-                    _playerState.SetSummary(response.Summary);
+                    Debug.Log($"StoryOutline applied: {outline.Title}");
                 },
                 onError: error => OnError?.Invoke(error)
             );
@@ -67,12 +60,12 @@ namespace TextingRPG.UI
         {
             if (_conversationEnded) return;
 
-            ChatMessage playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
-            _playerState.AppendMessage(playerMessage);
+            var playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
+            DataManager.Instance.AppendConversationMessage(playerMessage);
             OnMessageAdded?.Invoke(playerMessage);
 
-            _playerState.IncrementTurnCount();
-            int turnCount = _playerState.GetTurnCount();
+            var fullHistory = DataManager.Instance.GetConversationHistory();
+            int turnCount = fullHistory.Count(m => m.Sender == ChatSender.Player);
             bool isFinalTurn = turnCount >= MaxTurns;
 
             string endingHint = "";
@@ -81,32 +74,28 @@ namespace TextingRPG.UI
             else if (turnCount >= WrapUpTurnThreshold)
                 endingHint = "이야기가 슬슬 마무리를 향해 가야 한다. 남은 대화 안에서 자연스럽게 정리할 준비를 해라.";
 
-            var eventCategory = EventRoller.Roll(_eventConfig);
-            var eventHint = EventHintText.For(eventCategory);
-            var extraHint = string.IsNullOrEmpty(eventHint) ? endingHint : (endingHint + "\n" + eventHint).Trim();
-
-            var summary = _playerState.GetSummary();
-            var systemPrompt = SystemPromptBuilder.Build(_worldDescription, summary, extraHint);
-            var recentHistory = HistoryWindow.TakeRecent(_playerState.GetHistory(), MaxHistoryMessages);
+            var outline = DataManager.Instance.GetStoryOutline();
+            var facts = DataManager.Instance.GetImportantFacts();
+            var systemPrompt = PromptBuilder.BuildTurnPrompt(outline, facts, endingHint);
+            var recentHistory = HistoryWindow.TakeRecent(fullHistory, MaxHistoryMessages);
             var context = new ConversationContext { SystemPrompt = systemPrompt, History = recentHistory };
 
-            _provider.SendMessage(
+            _provider.ContinueStory(
                 context,
                 onSuccess: response =>
                 {
                     var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
-                    _playerState.AppendMessage(narrationMessage);
+                    DataManager.Instance.AppendConversationMessage(narrationMessage);
                     OnMessageAdded?.Invoke(narrationMessage);
 
                     if (!string.IsNullOrEmpty(response.NpcLine))
                     {
                         var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
-                        _playerState.AppendMessage(npcMessage);
+                        DataManager.Instance.AppendConversationMessage(npcMessage);
                         OnMessageAdded?.Invoke(npcMessage);
                     }
 
-                    _playerState.SetSummary(response.Summary);
-                    EffectApplier.Apply(_playerState, response.Effects);
+                    DataManager.Instance.AddImportantFacts(response.NewFacts);
 
                     if (isFinalTurn || response.IsEnding)
                     {
