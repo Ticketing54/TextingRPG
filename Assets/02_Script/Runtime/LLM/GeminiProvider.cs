@@ -88,9 +88,10 @@ namespace TextingRPG.LLM
                     ["worldSetting"] = new JObject { ["type"] = "STRING" },
                     ["keyCharacters"] = stringArraySchema,
                     ["keyEvents"] = stringArraySchema,
+                    ["finalGoal"] = new JObject { ["type"] = "STRING" },
                     ["openingNarration"] = new JObject { ["type"] = "STRING" }
                 },
-                ["required"] = new JArray("title", "worldSetting", "keyCharacters", "keyEvents", "openingNarration")
+                ["required"] = new JArray("title", "worldSetting", "keyCharacters", "keyEvents", "finalGoal", "openingNarration")
             };
 
             var body = new JObject
@@ -130,6 +131,7 @@ namespace TextingRPG.LLM
             {
                 Title = (string)payload["title"],
                 WorldSetting = (string)payload["worldSetting"],
+                FinalGoal = (string)payload["finalGoal"],
                 KeyCharacters = new List<string>(),
                 KeyEvents = new List<string>()
             };
@@ -206,6 +208,7 @@ namespace TextingRPG.LLM
                 {
                     ["narration"] = new JObject { ["type"] = "STRING" },
                     ["npcLine"] = new JObject { ["type"] = "STRING" },
+                    ["speakerName"] = new JObject { ["type"] = "STRING" },
                     ["newFacts"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
                     ["isEnding"] = new JObject { ["type"] = "BOOLEAN" }
                 },
@@ -249,6 +252,7 @@ namespace TextingRPG.LLM
             {
                 Narration = (string)payload["narration"],
                 NpcLine = (string)payload["npcLine"] ?? "",
+                SpeakerName = (string)payload["speakerName"] ?? "",
                 IsEnding = (bool?)payload["isEnding"] ?? false,
                 NewFacts = new List<string>()
             };

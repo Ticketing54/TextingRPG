@@ -7,6 +7,7 @@ namespace TextingRPG.LLM
     {
         public string Narration;
         public string NpcLine = "";
+        public string SpeakerName = "";
         public List<string> NewFacts = new List<string>();
         public bool IsEnding;
     }

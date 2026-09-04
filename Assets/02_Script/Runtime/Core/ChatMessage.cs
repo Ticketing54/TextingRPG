@@ -13,12 +13,14 @@ namespace TextingRPG.Core
         public ChatSender Sender;
         public string Text;
         public string Timestamp;
+        public string SenderName;
 
-        public ChatMessage(ChatSender sender, string text, string timestamp)
+        public ChatMessage(ChatSender sender, string text, string timestamp, string senderName = "")
         {
             Sender = sender;
             Text = text;
             Timestamp = timestamp;
+            SenderName = senderName;
         }
     }
 }

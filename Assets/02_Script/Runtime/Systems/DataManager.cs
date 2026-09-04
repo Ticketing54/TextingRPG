@@ -27,6 +27,7 @@ namespace TextingRPG.Systems
             public string WorldSetting;
             public List<string> KeyCharacters = new List<string>();
             public List<string> KeyEvents = new List<string>();
+            public string FinalGoal;
         }
 
         [Serializable]

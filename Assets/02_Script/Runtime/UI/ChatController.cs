@@ -90,7 +90,7 @@ namespace TextingRPG.UI
 
                     if (!string.IsNullOrEmpty(response.NpcLine))
                     {
-                        var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"));
+                        var npcMessage = new ChatMessage(ChatSender.Npc, response.NpcLine, DateTime.UtcNow.ToString("o"), response.SpeakerName);
                         DataManager.Instance.AppendConversationMessage(npcMessage);
                         OnMessageAdded?.Invoke(npcMessage);
                     }
