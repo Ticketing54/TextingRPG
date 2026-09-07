@@ -5,10 +5,13 @@ namespace TextingRPG.Systems
 {
     public static class PromptBuilder
     {
-        public static string BuildStoryOutlinePrompt(string worldDescription)
+        public static string BuildStoryOutlinePrompt(string worldDescription, string playerName)
         {
             return
+                "[플레이어 이름]\n" + playerName + "\n\n" +
                 "[세계관]\n" + worldDescription + "\n\n" +
+                "이야기의 주인공(플레이어)의 이름은 위 [플레이어 이름]이다. openingNarration과 " +
+                "이후 등장인물의 대사에서 플레이어를 이 이름으로 부른다.\n" +
                 "너는 이 세계관을 바탕으로 이야기의 기본 골격을 설계한다. title에는 이야기 제목을, " +
                 "worldSetting에는 세계관을 2~3문장으로 구체화해서, keyCharacters에는 이야기에 " +
                 "등장할 핵심 인물들을 이름과 짧은 설명으로, keyEvents에는 앞으로 일어날 수 있는 " +
@@ -19,9 +22,14 @@ namespace TextingRPG.Systems
                 "\"~해야 한다\"처럼 플레이어에게 분명한 임무로 느껴지도록 한 번 명확히 전달해라.";
         }
 
-        public static string BuildTurnPrompt(DataManager.StoryOutline outline, List<string> importantFacts, string extraHint = "")
+        public static string BuildTurnPrompt(DataManager.StoryOutline outline, List<string> importantFacts, string playerName, string extraHint = "")
         {
             var sb = new StringBuilder();
+
+            sb.AppendLine("[플레이어 이름]");
+            sb.AppendLine(playerName);
+            sb.AppendLine("이야기의 주인공(플레이어)의 이름이다. NPC가 플레이어를 부르거나 나레이션에서 지칭할 때 이 이름을 쓴다.");
+            sb.AppendLine();
 
             sb.AppendLine("[세계관]");
             sb.AppendLine(outline?.WorldSetting ?? "");
@@ -86,7 +94,14 @@ namespace TextingRPG.Systems
      "newFacts에는 이번 턴에서 실제로 발생하여 앞으로도 기억할 가치가 있는 새로운 사실만 작성한다. " +
      "플레이어가 주장했을 뿐 실제로 발생하지 않은 내용은 newFacts에 포함하지 않는다.\n" +
      "이번 턴까지의 상황을 고려했을 때 이야기가 자연스럽게 끝났다면 isEnding을 true로 설정한다. " +
-     "그렇지 않다면 false로 설정한다."
+     "그렇지 않다면 false로 설정한다.\n" +
+     "choices에는 이번 나레이션 다음에 플레이어가 취할 수 있는 행동을 3~5개 제시한다. " +
+     "가능하면 안전한 선택지와 위험한 선택지를 섞는다. " +
+     "각 선택지의 risk가 \"안전\"이면 반드시 성공하지만 상황을 크게 진전시키지 않으며 때로는 기회를 놓치는 행동이고, " +
+     "\"위험\"이면 성패가 갈릴 수 있는 행동이며, " +
+     "\"무모\"이면 위험보다도 더 크게 성패가 갈리는 무리한 행동이다 (성공하면 큰 성과, 실패하면 큰 피해). " +
+     "text는 플레이어 시점의 짧은 행동 문장으로만 쓴다. [안전]·[위험]·[무모] 같은 태그를 text 안에 넣지 않는다 (위험도는 risk 필드로만 표현한다). " +
+     "이야기가 끝났다면(isEnding true) choices는 빈 배열로 둔다."
             );
 
             if (!string.IsNullOrEmpty(extraHint))

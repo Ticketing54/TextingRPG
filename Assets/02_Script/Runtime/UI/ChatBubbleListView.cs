@@ -99,7 +99,8 @@ namespace TextingRPG.UI
             // 플레이어 말풍선은 즉시 완료되므로 대기 상태로 들어가지 않는다.
             if (message.Sender != ChatSender.Player) SetInputState(ChatInputState.Waiting);
 
-            _current.Play(message.Sender, message.Text, message.SenderName);
+            var displayText = string.IsNullOrEmpty(message.DisplayText) ? message.Text : message.DisplayText;
+            _current.Play(message.Sender, displayText, message.SenderName);
 
             ScrollToBottom();
         }

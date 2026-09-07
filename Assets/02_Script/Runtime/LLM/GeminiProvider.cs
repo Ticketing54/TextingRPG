@@ -201,6 +201,21 @@ namespace TextingRPG.LLM
                 });
             }
 
+            var choicesSchema = new JObject
+            {
+                ["type"] = "ARRAY",
+                ["items"] = new JObject
+                {
+                    ["type"] = "OBJECT",
+                    ["properties"] = new JObject
+                    {
+                        ["text"] = new JObject { ["type"] = "STRING" },
+                        ["risk"] = new JObject { ["type"] = "STRING", ["enum"] = new JArray("안전", "위험", "무모") }
+                    },
+                    ["required"] = new JArray("text", "risk")
+                }
+            };
+
             var responseSchema = new JObject
             {
                 ["type"] = "OBJECT",
@@ -210,9 +225,10 @@ namespace TextingRPG.LLM
                     ["npcLine"] = new JObject { ["type"] = "STRING" },
                     ["speakerName"] = new JObject { ["type"] = "STRING" },
                     ["newFacts"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
+                    ["choices"] = choicesSchema,
                     ["isEnding"] = new JObject { ["type"] = "BOOLEAN" }
                 },
-                ["required"] = new JArray("narration", "newFacts", "isEnding")
+                ["required"] = new JArray("narration", "newFacts", "choices", "isEnding")
             };
 
             var body = new JObject
@@ -262,7 +278,44 @@ namespace TextingRPG.LLM
                 foreach (var fact in factsToken) response.NewFacts.Add((string)fact);
             }
 
+            if (payload["choices"] is JArray choicesToken)
+            {
+                foreach (var choiceToken in choicesToken)
+                {
+                    var choiceText = (string)choiceToken["text"];
+                    if (string.IsNullOrEmpty(choiceText)) continue;
+                    // LLM이 이전 턴 선택지 형식("1. [위험] …")을 흉내 내 text 앞에 태그를 붙이는 경우가 있어 걷어낸다.
+                    choiceText = StripLeadingRiskTag(choiceText);
+                    if (string.IsNullOrEmpty(choiceText)) continue;
+                    var risk = ParseRisk((string)choiceToken["risk"]);
+                    response.Choices.Add(new Choice(choiceText, risk));
+                }
+            }
+
             return response;
+        }
+
+        private static readonly string[] RiskTagPrefixes = { "[안전]", "[위험]", "[무모]" };
+
+        private static string StripLeadingRiskTag(string text)
+        {
+            var trimmed = text.TrimStart();
+            foreach (var tag in RiskTagPrefixes)
+            {
+                if (trimmed.StartsWith(tag))
+                    return trimmed.Substring(tag.Length).TrimStart();
+            }
+            return text;
+        }
+
+        private static ChoiceRisk ParseRisk(string risk)
+        {
+            switch (risk)
+            {
+                case "위험": return ChoiceRisk.Risky;
+                case "무모": return ChoiceRisk.Reckless;
+                default: return ChoiceRisk.Safe;
+            }
         }
     }
 }

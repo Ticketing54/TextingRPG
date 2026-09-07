@@ -9,6 +9,7 @@ namespace TextingRPG.LLM
         public string NpcLine = "";
         public string SpeakerName = "";
         public List<string> NewFacts = new List<string>();
+        public List<Choice> Choices = new List<Choice>();
         public bool IsEnding;
     }
 }

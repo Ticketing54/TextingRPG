@@ -6,16 +6,20 @@ namespace TextingRPG.UI
 {
     // ChatController <-> ChatBubbleListView 배선을 실제 Gemini API로 연결하는 부트스트랩.
     // API 키는 프로젝트 루트의 secrets.local.json(커밋 안 됨)에서 읽는다 (코드/에셋에 하드코딩 금지).
+    // 흐름: 키워드 선택 → 플레이어 이름 입력 → 스토리 생성.
     public class ChatBootstrap : MonoBehaviour
     {
         [SerializeField] ChatBubbleListView chatBubbleListView;
         [SerializeField] ChatInputView chatInputView;
+        [SerializeField] DiceRollOverlayView diceRollOverlayView;
         [SerializeField] string geminiModel = "gemini-3.5-flash-lite"; // thinking 토큰 없이 응답하고, 3.6보다 무료 한도가 넉넉함
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
+        [SerializeField] PlayerNamePanel playerNamePanel;
         [SerializeField] GameObject chatUIRoot;
 
         private ChatController _controller;
         private string _apiKey;
+        private string[] _keywords;
 
         private void Start()
         {
@@ -26,20 +30,29 @@ namespace TextingRPG.UI
             }
 
             chatUIRoot.SetActive(false);
+            playerNamePanel.gameObject.SetActive(false);
             keywordIntroPanel.OnKeywordsConfirmed += HandleKeywordsConfirmed;
+            playerNamePanel.OnNameConfirmed += HandleNameConfirmed;
         }
 
         private void HandleKeywordsConfirmed(string[] keywords)
         {
-            var finalWorldDescription =  "\n\n[이번 모험의 키워드] " + string.Join(", ", keywords);
+            _keywords = keywords;
+            playerNamePanel.gameObject.SetActive(true);
+        }
+
+        private void HandleNameConfirmed(string playerName)
+        {
+            var finalWorldDescription = "\n\n[이번 모험의 키워드] " + string.Join(", ", _keywords);
 
             ILLMProvider provider = new GeminiProvider(_apiKey, geminiModel);
 
-            _controller = new ChatController(provider, finalWorldDescription);
+            _controller = new ChatController(provider, finalWorldDescription, playerName);
             _controller.OnError += HandleError;
             _controller.OnConversationEnded += HandleConversationEnded;
             chatBubbleListView.Bind(_controller);
             chatInputView.Bind(_controller);
+            diceRollOverlayView.Bind(_controller);
 
             chatUIRoot.SetActive(true);
             _controller.BeginAdventure();

@@ -17,22 +17,30 @@ namespace TextingRPG.UI
 
         private readonly ILLMProvider _provider;
         private readonly string _worldDescription;
+        private readonly string _playerName;
 
         private bool _conversationEnded;
+        private bool _awaitingResponse;
+        private List<Choice> _lastChoices = new List<Choice>();
 
         public event Action<ChatMessage> OnMessageAdded;
         public event Action<string> OnError;
         public event Action OnConversationEnded;
 
-        public ChatController(ILLMProvider provider, string worldDescription)
+        // 위험한 선택으로 주사위 두 개를 굴렸을 때 발생. (굴림 결과, 결과 등급 라벨, 애니메이션이
+        // 끝나면 호출해야 하는 콜백)을 전달한다. 구독자가 없으면 애니메이션 없이 즉시 진행한다.
+        public event Action<DiceRollResult, string, Action> OnDiceRollRequested;
+
+        public ChatController(ILLMProvider provider, string worldDescription, string playerName)
         {
             _provider = provider;
             _worldDescription = worldDescription;
+            _playerName = playerName;
         }
 
         public void BeginAdventure()
         {
-            var systemPrompt = PromptBuilder.BuildStoryOutlinePrompt(_worldDescription);
+            var systemPrompt = PromptBuilder.BuildStoryOutlinePrompt(_worldDescription, _playerName);
             // Gemini API는 contents가 빈 배열이면 요청을 거부하므로, 저장되지 않는 시작 트리거 턴 하나를 심어준다.
             var kickoff = new List<ChatMessage>
             {
@@ -58,11 +66,53 @@ namespace TextingRPG.UI
 
         public void SendPlayerMessage(string text)
         {
-            if (_conversationEnded) return;
+            if (_conversationEnded || _awaitingResponse) return;
 
-            var playerMessage = new ChatMessage(ChatSender.Player, text, DateTime.UtcNow.ToString("o"));
+            // 입력이 직전 턴 선택지의 번호면 그 선택지로 해석하고, 아니면 자유 입력으로 둔다.
+            int? choiceIndex = ChoiceInputParser.Parse(text, _lastChoices.Count);
+            Choice selectedChoice = choiceIndex.HasValue ? _lastChoices[choiceIndex.Value] : null;
+            string playerText = selectedChoice != null ? selectedChoice.Text : text;
+
+            var playerMessage = new ChatMessage(ChatSender.Player, playerText, DateTime.UtcNow.ToString("o"));
             DataManager.Instance.AppendConversationMessage(playerMessage);
             OnMessageAdded?.Invoke(playerMessage);
+
+            _awaitingResponse = true;
+
+            // 위험/무모 선택이면 2d6를 먼저 굴려두고, 애니메이션이 끝난 뒤에 LLM을 호출한다.
+            // 안전한 선택/자유 입력은 굴릴 게 없으니 바로 진행한다.
+            if (selectedChoice != null && selectedChoice.Risk != ChoiceRisk.Safe)
+            {
+                bool reckless = selectedChoice.Risk == ChoiceRisk.Reckless;
+                var roll = DiceRoll.Roll();
+                var outcome = DiceRoll.Bucket(roll.Total, reckless);
+                var directionHint = reckless
+                    ? DiceDirectionText.ForReckless(outcome)
+                    : DiceDirectionText.ForRisky(outcome);
+                var outcomeLabel = $"{roll.A} + {roll.B} = {roll.Total} · {DiceDirectionText.ShortLabel(outcome)}";
+                var diceResultLine = $"{DiceFaces.Glyph(roll.A)} {DiceFaces.Glyph(roll.B)}  {roll.Total} · {DiceDirectionText.ShortLabel(outcome)}";
+
+                if (OnDiceRollRequested != null)
+                    OnDiceRollRequested.Invoke(roll, outcomeLabel, () => ProceedWithTurn(selectedChoice, directionHint, diceResultLine));
+                else
+                    ProceedWithTurn(selectedChoice, directionHint, diceResultLine); // 오버레이 미구독(테스트 등) 시 즉시 진행
+            }
+            else
+            {
+                var directionHint = selectedChoice != null ? DiceDirectionText.ForSafe() : "";
+                ProceedWithTurn(selectedChoice, directionHint);
+            }
+        }
+
+        private void ProceedWithTurn(Choice selectedChoice, string directionHint, string diceResultLine = null)
+        {
+            // 주사위를 굴린 턴이면 결과를 별도의 가운데 정렬 나레이션 버블로 먼저 보여준다.
+            // 화면 표시만 — 대화 히스토리/프롬프트에는 넣지 않는다 (LLM은 방향 문장만 본다).
+            if (!string.IsNullOrEmpty(diceResultLine))
+            {
+                var diceMessage = new ChatMessage(ChatSender.Narration, diceResultLine, DateTime.UtcNow.ToString("o"));
+                OnMessageAdded?.Invoke(diceMessage);
+            }
 
             var fullHistory = DataManager.Instance.GetConversationHistory();
             int turnCount = fullHistory.Count(m => m.Sender == ChatSender.Player);
@@ -74,9 +124,15 @@ namespace TextingRPG.UI
             else if (turnCount >= WrapUpTurnThreshold)
                 endingHint = "이야기가 슬슬 마무리를 향해 가야 한다. 남은 대화 안에서 자연스럽게 정리할 준비를 해라.";
 
+            var hintParts = new List<string>();
+            if (selectedChoice != null) hintParts.Add($"플레이어 선택: {selectedChoice.Text}");
+            if (!string.IsNullOrEmpty(directionHint)) hintParts.Add(directionHint);
+            if (!string.IsNullOrEmpty(endingHint)) hintParts.Add(endingHint);
+            var extraHint = string.Join("\n", hintParts);
+
             var outline = DataManager.Instance.GetStoryOutline();
             var facts = DataManager.Instance.GetImportantFacts();
-            var systemPrompt = PromptBuilder.BuildTurnPrompt(outline, facts, endingHint);
+            var systemPrompt = PromptBuilder.BuildTurnPrompt(outline, facts, _playerName, extraHint);
             var recentHistory = HistoryWindow.TakeRecent(fullHistory, MaxHistoryMessages);
             var context = new ConversationContext { SystemPrompt = systemPrompt, History = recentHistory };
 
@@ -84,6 +140,8 @@ namespace TextingRPG.UI
                 context,
                 onSuccess: response =>
                 {
+                    _awaitingResponse = false;
+
                     var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
                     DataManager.Instance.AppendConversationMessage(narrationMessage);
                     OnMessageAdded?.Invoke(narrationMessage);
@@ -97,13 +155,31 @@ namespace TextingRPG.UI
 
                     DataManager.Instance.AddImportantFacts(response.NewFacts);
 
-                    if (isFinalTurn || response.IsEnding)
+                    _lastChoices = response.Choices ?? new List<Choice>();
+                    bool ending = isFinalTurn || response.IsEnding;
+
+                    if (!ending && _lastChoices.Count > 0)
+                    {
+                        var choicesMessage = new ChatMessage(
+                            ChatSender.Narration, ChoiceListFormatter.Plain(_lastChoices), DateTime.UtcNow.ToString("o"))
+                        {
+                            DisplayText = ChoiceListFormatter.Colored(_lastChoices)
+                        };
+                        DataManager.Instance.AppendConversationMessage(choicesMessage);
+                        OnMessageAdded?.Invoke(choicesMessage);
+                    }
+
+                    if (ending)
                     {
                         _conversationEnded = true;
                         OnConversationEnded?.Invoke();
                     }
                 },
-                onError: error => OnError?.Invoke(error)
+                onError: error =>
+                {
+                    _awaitingResponse = false;
+                    OnError?.Invoke(error);
+                }
             );
         }
     }
