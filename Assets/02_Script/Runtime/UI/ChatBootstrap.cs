@@ -6,13 +6,14 @@ namespace TextingRPG.UI
 {
     // ChatController <-> ChatBubbleListView 배선을 실제 Gemini API로 연결하는 부트스트랩.
     // API 키는 프로젝트 루트의 secrets.local.json(커밋 안 됨)에서 읽는다 (코드/에셋에 하드코딩 금지).
-    // 흐름: 키워드 선택 → 플레이어 이름 입력 → 스토리 생성.
+    // 흐름: 메인 메뉴 → 키워드 선택 → 플레이어 이름 입력 → 스토리 생성.
     public class ChatBootstrap : MonoBehaviour
     {
         [SerializeField] ChatBubbleListView chatBubbleListView;
         [SerializeField] ChatInputView chatInputView;
         [SerializeField] DiceRollOverlayView diceRollOverlayView;
         [SerializeField] string geminiModel = "gemini-3.5-flash-lite"; // thinking 토큰 없이 응답하고, 3.6보다 무료 한도가 넉넉함
+        [SerializeField] MainMenuPanel mainMenuPanel;
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
         [SerializeField] PlayerNamePanel playerNamePanel;
         [SerializeField] GameObject chatUIRoot;
@@ -30,9 +31,18 @@ namespace TextingRPG.UI
             }
 
             chatUIRoot.SetActive(false);
+            keywordIntroPanel.gameObject.SetActive(false);
             playerNamePanel.gameObject.SetActive(false);
+
+            mainMenuPanel.OnNewGameClicked += HandleNewGameClicked;
             keywordIntroPanel.OnKeywordsConfirmed += HandleKeywordsConfirmed;
             playerNamePanel.OnNameConfirmed += HandleNameConfirmed;
+        }
+
+        private void HandleNewGameClicked()
+        {
+            mainMenuPanel.gameObject.SetActive(false);
+            keywordIntroPanel.gameObject.SetActive(true);
         }
 
         private void HandleKeywordsConfirmed(string[] keywords)
