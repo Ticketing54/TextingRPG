@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: DefaultKeywordSet
   m_EditorClassIdentifier: TextingRPG.Runtime::TextingRPG.Core.KeywordSet
   Keywords:
-  - "\uC548\uAC1C"
-  - "\uD3ED\uD48D\uC6B0"
+  - "\uACF5\uD3EC"
+  - "\uD310\uD0C0\uC9C0"
   - "\uB0A1\uC740 \uC9C0\uB3C4"
   - "\uC740\uD654"
   - "\uB291\uB300 \uC6B8\uC74C"

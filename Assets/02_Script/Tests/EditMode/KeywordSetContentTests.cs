@@ -15,7 +15,7 @@ namespace TextingRPG.Tests
 
             Assert.IsNotNull(keywordSet, $"{AssetPath} 에셋을 찾을 수 없습니다.");
             CollectionAssert.AreEqual(
-                new[] { "안개", "폭풍우", "낡은 지도", "은화", "늑대 울음", "별빛" },
+                new[] { "공포", "판타지", "낡은 지도", "은화", "늑대 울음", "별빛" },
                 keywordSet.Keywords);
         }
     }
