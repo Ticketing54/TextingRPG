@@ -30,6 +30,19 @@ namespace TextingRPG.Tests
             StringAssert.Contains("안전", body);
             StringAssert.Contains("위험", body);
             StringAssert.Contains("무모", body);
+            StringAssert.Contains("offTopic", body);
+        }
+
+        [Test]
+        public void ParseTurnResponse_ReadsOffTopicFlag()
+        {
+            var onTopic = "{\"narration\":\"n\",\"newFacts\":[],\"isEnding\":false,\"offTopic\":false,\"choices\":[]}";
+            var offTopic = "{\"narration\":\"딴 얘기 말고 이야기로 돌아오자.\",\"newFacts\":[],\"isEnding\":false,\"offTopic\":true,\"choices\":[]}";
+            var missing = "{\"narration\":\"n\",\"newFacts\":[],\"isEnding\":false,\"choices\":[]}";
+
+            Assert.IsFalse(GeminiProvider.ParseTurnResponse(WrapAsGeminiResponse(onTopic)).IsOffTopic);
+            Assert.IsTrue(GeminiProvider.ParseTurnResponse(WrapAsGeminiResponse(offTopic)).IsOffTopic);
+            Assert.IsFalse(GeminiProvider.ParseTurnResponse(WrapAsGeminiResponse(missing)).IsOffTopic);
         }
 
         [Test]

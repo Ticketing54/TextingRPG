@@ -22,6 +22,7 @@ namespace TextingRPG.UI
         private bool _conversationEnded;
         private bool _awaitingResponse;
         private List<Choice> _lastChoices = new List<Choice>();
+        private PlayerEvaluation.Tally _tally; // 플레이 스타일 집계 (엔딩 평가용)
 
         public event Action<ChatMessage> OnMessageAdded;
         public event Action<string> OnError;
@@ -77,6 +78,8 @@ namespace TextingRPG.UI
             DataManager.Instance.AppendConversationMessage(playerMessage);
             OnMessageAdded?.Invoke(playerMessage);
 
+            if (selectedChoice != null) _tally.CountChoice(selectedChoice.Risk);
+
             _awaitingResponse = true;
 
             // 위험/무모 선택이면 2d6를 먼저 굴려두고, 애니메이션이 끝난 뒤에 LLM을 호출한다.
@@ -86,6 +89,7 @@ namespace TextingRPG.UI
                 bool reckless = selectedChoice.Risk == ChoiceRisk.Reckless;
                 var roll = DiceRoll.Roll();
                 var outcome = DiceRoll.Bucket(roll.Total, reckless);
+                _tally.CountOutcome(outcome);
                 var directionHint = reckless
                     ? DiceDirectionText.ForReckless(outcome)
                     : DiceDirectionText.ForRisky(outcome);
@@ -142,6 +146,12 @@ namespace TextingRPG.UI
                 {
                     _awaitingResponse = false;
 
+                    if (response.IsOffTopic)
+                    {
+                        HandleOffTopic(response.Narration);
+                        return;
+                    }
+
                     var narrationMessage = new ChatMessage(ChatSender.Narration, response.Narration, DateTime.UtcNow.ToString("o"));
                     DataManager.Instance.AppendConversationMessage(narrationMessage);
                     OnMessageAdded?.Invoke(narrationMessage);
@@ -172,6 +182,11 @@ namespace TextingRPG.UI
                     if (ending)
                     {
                         _conversationEnded = true;
+
+                        var evalMessage = new ChatMessage(
+                            ChatSender.Narration, PlayerEvaluation.Summary(_tally), DateTime.UtcNow.ToString("o"));
+                        OnMessageAdded?.Invoke(evalMessage);
+
                         OnConversationEnded?.Invoke();
                     }
                 },
@@ -181,6 +196,29 @@ namespace TextingRPG.UI
                     OnError?.Invoke(error);
                 }
             );
+        }
+
+        // 플레이어 입력이 이야기와 무관할 때: 그 입력을 턴/히스토리에서 빼고, 짧은 안내와
+        // 직전 선택지를 다시 보여준다. 화면의 플레이어 버블은 그대로 남는다.
+        private void HandleOffTopic(string redirectLine)
+        {
+            var history = DataManager.Instance.GetConversationHistory();
+            if (history.Count > 0 && history[history.Count - 1].Sender == ChatSender.Player)
+                history.RemoveAt(history.Count - 1);
+
+            var line = string.IsNullOrWhiteSpace(redirectLine)
+                ? "(지금 이야기와 관련 없는 말 같다. 하던 데서 이어가자.)"
+                : redirectLine;
+            OnMessageAdded?.Invoke(new ChatMessage(ChatSender.Narration, line, DateTime.UtcNow.ToString("o")));
+
+            if (_lastChoices.Count > 0)
+            {
+                OnMessageAdded?.Invoke(new ChatMessage(
+                    ChatSender.Narration, ChoiceListFormatter.Plain(_lastChoices), DateTime.UtcNow.ToString("o"))
+                {
+                    DisplayText = ChoiceListFormatter.Colored(_lastChoices)
+                });
+            }
         }
     }
 }

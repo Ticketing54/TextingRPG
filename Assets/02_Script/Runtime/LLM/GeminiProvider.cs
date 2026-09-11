@@ -226,9 +226,10 @@ namespace TextingRPG.LLM
                     ["speakerName"] = new JObject { ["type"] = "STRING" },
                     ["newFacts"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
                     ["choices"] = choicesSchema,
-                    ["isEnding"] = new JObject { ["type"] = "BOOLEAN" }
+                    ["isEnding"] = new JObject { ["type"] = "BOOLEAN" },
+                    ["offTopic"] = new JObject { ["type"] = "BOOLEAN" }
                 },
-                ["required"] = new JArray("narration", "newFacts", "choices", "isEnding")
+                ["required"] = new JArray("narration", "newFacts", "choices", "isEnding", "offTopic")
             };
 
             var body = new JObject
@@ -270,6 +271,7 @@ namespace TextingRPG.LLM
                 NpcLine = (string)payload["npcLine"] ?? "",
                 SpeakerName = (string)payload["speakerName"] ?? "",
                 IsEnding = (bool?)payload["isEnding"] ?? false,
+                IsOffTopic = (bool?)payload["offTopic"] ?? false,
                 NewFacts = new List<string>()
             };
 
