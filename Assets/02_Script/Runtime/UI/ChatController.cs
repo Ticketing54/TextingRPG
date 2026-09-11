@@ -11,8 +11,8 @@ namespace TextingRPG.UI
     public class ChatController
     {
         private const int MaxHistoryMessages = 8;
-        private const int WrapUpTurnThreshold = 80;
-        private const int MaxTurns = 100;
+        private const int WrapUpTurnThreshold = 100;
+        private const int MaxTurns = 120;
         private const string OpeningKickoffMessage = "(모험이 시작된다.)";
 
         private readonly ILLMProvider _provider;
@@ -182,6 +182,7 @@ namespace TextingRPG.UI
                     if (ending)
                     {
                         _conversationEnded = true;
+                        Debug.Log($"이야기 종료 — endingTone: '{response.EndingTone}'");
 
                         var evalMessage = new ChatMessage(
                             ChatSender.Narration, PlayerEvaluation.Summary(_tally), DateTime.UtcNow.ToString("o"));

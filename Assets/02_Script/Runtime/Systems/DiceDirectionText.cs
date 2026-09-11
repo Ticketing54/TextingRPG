@@ -31,8 +31,8 @@ namespace TextingRPG.Systems
             switch (outcome)
             {
                 case DiceOutcome.CriticalFailure:
-                    return "플레이어의 무모한 시도는 완전히 역효과를 내 돌이키기 힘든 피해나 큰 대가가 생긴다. " +
-                           "단, 이야기가 여기서 끝나버리지는 않게 한다.";
+                    return "플레이어의 무모한 시도는 완전히 역효과를 내 돌이킬 수 없는 피해가 생긴다. " +
+                           "상황상 이야기가 여기서 끝날 만하면 그렇게 끝내도 된다 (죽음·파멸 등, isEnding true / endingTone \"bad\").";
                 case DiceOutcome.Failure:
                     return "플레이어의 무모한 시도는 실패하고, 그 대가가 평소보다 크다.";
                 case DiceOutcome.Partial:

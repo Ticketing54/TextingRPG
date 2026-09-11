@@ -31,6 +31,40 @@ namespace TextingRPG.Tests
             StringAssert.Contains("위험", body);
             StringAssert.Contains("무모", body);
             StringAssert.Contains("offTopic", body);
+            StringAssert.Contains("endingTone", body);
+        }
+
+        [Test]
+        public void ParseTurnResponse_ReadsEndingTone()
+        {
+            var good = "{\"narration\":\"끝\",\"newFacts\":[],\"isEnding\":true,\"endingTone\":\"good\",\"offTopic\":false,\"choices\":[]}";
+            var missing = "{\"narration\":\"n\",\"newFacts\":[],\"isEnding\":false,\"choices\":[]}";
+
+            Assert.AreEqual("good", GeminiProvider.ParseTurnResponse(WrapAsGeminiResponse(good)).EndingTone);
+            Assert.AreEqual("", GeminiProvider.ParseTurnResponse(WrapAsGeminiResponse(missing)).EndingTone);
+        }
+
+        [Test]
+        public void StoryOutline_SchemaAndParse_IncludeCentralConflict()
+        {
+            var provider = new GeminiProvider("key", "model");
+            var context = new ConversationContext
+            {
+                SystemPrompt = "sys",
+                History = new System.Collections.Generic.List<TextingRPG.Core.ChatMessage>
+                {
+                    new TextingRPG.Core.ChatMessage(TextingRPG.Core.ChatSender.Player, "hi", "t")
+                }
+            };
+
+            StringAssert.Contains("centralConflict", provider.BuildStoryOutlineRequestBody(context));
+
+            var payload =
+                "{\"title\":\"T\",\"worldSetting\":\"W\",\"centralConflict\":\"왕과 반란군의 대립\"," +
+                "\"keyCharacters\":[],\"keyEvents\":[],\"finalGoal\":\"G\",\"openingNarration\":\"O\"}";
+            var (outline, _) = GeminiProvider.ParseStoryOutline(WrapAsGeminiResponse(payload));
+
+            Assert.AreEqual("왕과 반란군의 대립", outline.CentralConflict);
         }
 
         [Test]

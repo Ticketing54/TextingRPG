@@ -25,6 +25,7 @@ namespace TextingRPG.Systems
         {
             public string Title;
             public string WorldSetting;
+            public string CentralConflict;
             public List<string> KeyCharacters = new List<string>();
             public List<string> KeyEvents = new List<string>();
             public string FinalGoal;

@@ -86,12 +86,13 @@ namespace TextingRPG.LLM
                 {
                     ["title"] = new JObject { ["type"] = "STRING" },
                     ["worldSetting"] = new JObject { ["type"] = "STRING" },
+                    ["centralConflict"] = new JObject { ["type"] = "STRING" },
                     ["keyCharacters"] = stringArraySchema,
                     ["keyEvents"] = stringArraySchema,
                     ["finalGoal"] = new JObject { ["type"] = "STRING" },
                     ["openingNarration"] = new JObject { ["type"] = "STRING" }
                 },
-                ["required"] = new JArray("title", "worldSetting", "keyCharacters", "keyEvents", "finalGoal", "openingNarration")
+                ["required"] = new JArray("title", "worldSetting", "centralConflict", "keyCharacters", "keyEvents", "finalGoal", "openingNarration")
             };
 
             var body = new JObject
@@ -131,6 +132,7 @@ namespace TextingRPG.LLM
             {
                 Title = (string)payload["title"],
                 WorldSetting = (string)payload["worldSetting"],
+                CentralConflict = (string)payload["centralConflict"],
                 FinalGoal = (string)payload["finalGoal"],
                 KeyCharacters = new List<string>(),
                 KeyEvents = new List<string>()
@@ -227,9 +229,10 @@ namespace TextingRPG.LLM
                     ["newFacts"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
                     ["choices"] = choicesSchema,
                     ["isEnding"] = new JObject { ["type"] = "BOOLEAN" },
+                    ["endingTone"] = new JObject { ["type"] = "STRING" }, // "" / "good" / "bad" / "bittersweet" — 프롬프트에서 지정
                     ["offTopic"] = new JObject { ["type"] = "BOOLEAN" }
                 },
-                ["required"] = new JArray("narration", "newFacts", "choices", "isEnding", "offTopic")
+                ["required"] = new JArray("narration", "newFacts", "choices", "isEnding", "endingTone", "offTopic")
             };
 
             var body = new JObject
@@ -272,6 +275,7 @@ namespace TextingRPG.LLM
                 SpeakerName = (string)payload["speakerName"] ?? "",
                 IsEnding = (bool?)payload["isEnding"] ?? false,
                 IsOffTopic = (bool?)payload["offTopic"] ?? false,
+                EndingTone = (string)payload["endingTone"] ?? "",
                 NewFacts = new List<string>()
             };
 
