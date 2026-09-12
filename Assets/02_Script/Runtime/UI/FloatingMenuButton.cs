@@ -10,6 +10,10 @@ namespace TextingRPG.UI
     // 옮길 수 있고(놓으면 가까운 가장자리에 스냅), 탭하면 나가기/설정 버튼이 화면 안쪽 방향으로 펼쳐진다.
     // chatUIRoot의 자식으로 배치해서 채팅/히스토리 화면이 켜지고 꺼질 때 같이 뜨고 사라진다 —
     // ChatBootstrap 등 다른 스크립트는 이 컴포넌트를 몰라도 된다.
+    //
+    // 애니메이션은 RectTransform.DOAnchorPos/CanvasGroup.DOFade 같은 DOTween UI 모듈 shortcut 대신
+    // DOTween.To(getter, setter, ...)로 직접 값을 트윈한다 — 이 프로젝트엔 그 UI 모듈이 없다
+    // (ChatBubble.cs가 타이핑 애니메이션에 쓰는 것과 동일한 패턴).
     public class FloatingMenuButton : MonoBehaviour,
         IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
     {
@@ -31,6 +35,12 @@ namespace TextingRPG.UI
         private RectTransform _settingsRect;
         private CanvasGroup _settingsGroup;
         private bool _expanded;
+
+        private Tween _snapTween;
+        private Tween _exitMoveTween;
+        private Tween _exitFadeTween;
+        private Tween _settingsMoveTween;
+        private Tween _settingsFadeTween;
 
         private void Awake()
         {
@@ -75,8 +85,13 @@ namespace TextingRPG.UI
             float buttonRadius = _rect.rect.width / 2f;
             float targetX = FloatingMenuLayout.SnapTargetX(
                 _rect.anchoredPosition.x, _parentRect.rect.width, buttonRadius, edgeMargin);
-            _rect.DOKill();
-            _rect.DOAnchorPosX(targetX, snapDuration).SetEase(Ease.OutBack);
+
+            _snapTween?.Kill();
+            _snapTween = DOTween.To(
+                    () => _rect.anchoredPosition.x,
+                    x => _rect.anchoredPosition = new Vector2(x, _rect.anchoredPosition.y),
+                    targetX, snapDuration)
+                .SetEase(Ease.OutBack);
         }
 
         // 실제로 드래그가 일어나면(EventSystem이 dragging으로 판단) 이 콜백은 호출되지 않으므로
@@ -95,22 +110,26 @@ namespace TextingRPG.UI
             int dir = FloatingMenuLayout.ExpandDirectionSign(_rect.anchoredPosition.x);
             Vector2 basePos = _rect.anchoredPosition;
 
-            _exitRect.DOKill();
-            _settingsRect.DOKill();
-            _exitGroup.DOKill();
-            _settingsGroup.DOKill();
+            _exitMoveTween?.Kill();
+            _exitFadeTween?.Kill();
+            _settingsMoveTween?.Kill();
+            _settingsFadeTween?.Kill();
 
             _exitRect.anchoredPosition = basePos;
             _settingsRect.anchoredPosition = basePos;
             _exitGroup.blocksRaycasts = true;
             _settingsGroup.blocksRaycasts = true;
 
-            _exitRect.DOAnchorPos(basePos + new Vector2(dir * expandSpacing, 0f), expandDuration).SetEase(Ease.OutBack);
-            _exitGroup.DOFade(1f, expandDuration);
+            var exitTarget = basePos + new Vector2(dir * expandSpacing, 0f);
+            _exitMoveTween = DOTween.To(() => _exitRect.anchoredPosition, v => _exitRect.anchoredPosition = v, exitTarget, expandDuration)
+                .SetEase(Ease.OutBack);
+            _exitFadeTween = DOTween.To(() => _exitGroup.alpha, v => _exitGroup.alpha = v, 1f, expandDuration);
 
-            _settingsRect.DOAnchorPos(basePos + new Vector2(dir * expandSpacing * 2f, 0f), expandDuration)
+            var settingsTarget = basePos + new Vector2(dir * expandSpacing * 2f, 0f);
+            _settingsMoveTween = DOTween.To(() => _settingsRect.anchoredPosition, v => _settingsRect.anchoredPosition = v, settingsTarget, expandDuration)
                 .SetEase(Ease.OutBack).SetDelay(expandStagger);
-            _settingsGroup.DOFade(1f, expandDuration).SetDelay(expandStagger);
+            _settingsFadeTween = DOTween.To(() => _settingsGroup.alpha, v => _settingsGroup.alpha = v, 1f, expandDuration)
+                .SetDelay(expandStagger);
         }
 
         private void Collapse()
@@ -118,20 +137,24 @@ namespace TextingRPG.UI
             _expanded = false;
             Vector2 basePos = _rect.anchoredPosition;
 
-            _exitRect.DOKill();
-            _settingsRect.DOKill();
-            _exitGroup.DOKill();
-            _settingsGroup.DOKill();
+            _exitMoveTween?.Kill();
+            _exitFadeTween?.Kill();
+            _settingsMoveTween?.Kill();
+            _settingsFadeTween?.Kill();
 
-            _exitRect.DOAnchorPos(basePos, expandDuration).SetEase(Ease.InBack);
-            _exitGroup.DOFade(0f, expandDuration).OnComplete(() => _exitGroup.blocksRaycasts = false);
+            _exitMoveTween = DOTween.To(() => _exitRect.anchoredPosition, v => _exitRect.anchoredPosition = v, basePos, expandDuration)
+                .SetEase(Ease.InBack);
+            _exitFadeTween = DOTween.To(() => _exitGroup.alpha, v => _exitGroup.alpha = v, 0f, expandDuration)
+                .OnComplete(() => _exitGroup.blocksRaycasts = false);
 
-            _settingsRect.DOAnchorPos(basePos, expandDuration).SetEase(Ease.InBack);
-            _settingsGroup.DOFade(0f, expandDuration).OnComplete(() =>
-            {
-                _settingsGroup.blocksRaycasts = false;
-                blocker.SetActive(false);
-            });
+            _settingsMoveTween = DOTween.To(() => _settingsRect.anchoredPosition, v => _settingsRect.anchoredPosition = v, basePos, expandDuration)
+                .SetEase(Ease.InBack);
+            _settingsFadeTween = DOTween.To(() => _settingsGroup.alpha, v => _settingsGroup.alpha = v, 0f, expandDuration)
+                .OnComplete(() =>
+                {
+                    _settingsGroup.blocksRaycasts = false;
+                    blocker.SetActive(false);
+                });
         }
 
         private void ExitToMainMenu()
