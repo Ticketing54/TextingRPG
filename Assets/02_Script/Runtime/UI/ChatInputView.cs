@@ -37,6 +37,12 @@ namespace TextingRPG.UI
             _controller.SendPlayerMessage(text);
         }
 
+        // 히스토리 등 읽기 전용 모드에서 쓴다. Bind() 없이도(컨트롤러 없이) 입력을 잠글 수 있다.
+        public void DisableForReadOnly()
+        {
+            SetInteractable(false);
+        }
+
         private void HandleInputStateChanged(ChatInputState state)
         {
             SetInteractable(state == ChatInputState.InputEnabled);

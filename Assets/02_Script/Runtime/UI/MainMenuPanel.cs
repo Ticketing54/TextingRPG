@@ -15,15 +15,16 @@ namespace TextingRPG.UI
         [SerializeField] Button quitButton;
 
         public event Action OnNewGameClicked;
+        public event Action OnHistoryClicked;
 
         private void Awake()
         {
             newGameButton.onClick.AddListener(() => OnNewGameClicked?.Invoke());
+            historyButton.onClick.AddListener(() => OnHistoryClicked?.Invoke());
             quitButton.onClick.AddListener(Quit);
 
-            // 세이브 시스템 붙기 전까지 비활성.
+            // 이어하기는 실제 재개 로직이 붙기 전까지, 설정은 조절할 항목이 생기기 전까지 비활성.
             continueButton.interactable = false;
-            historyButton.interactable = false;
             settingsButton.interactable = false;
         }
 

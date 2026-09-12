@@ -71,6 +71,28 @@ namespace TextingRPG.UI
             RecomputeInputState(force: true);
         }
 
+        // 저장된 대화를 읽기 전용으로 재생한다 (히스토리 보기). ChatController 없이 호출한다.
+        // 큐/타이핑 없이 즉시 전부 표시하고, 끝나면 Lock()으로 입력을 잠근다.
+        public void LoadHistory(List<ChatMessage> messages)
+        {
+            for (int i = content.childCount - 1; i >= 0; i--) Destroy(content.GetChild(i).gameObject);
+            _pending.Clear();
+            _current = null;
+            _currentMessage = null;
+
+            foreach (var message in messages)
+            {
+                var prefab = message.Sender == ChatSender.Narration ? narrationBubblePrefab : chatBubblePrefab;
+                var bubble = Instantiate(prefab, content);
+                var displayText = string.IsNullOrEmpty(message.DisplayText) ? message.Text : message.DisplayText;
+                bubble.Play(message.Sender, displayText, message.SenderName);
+                bubble.Skip();
+            }
+
+            ScrollToBottom();
+            Lock();
+        }
+
         private void Enqueue(ChatMessage message)
         {
             if (message.Sender == ChatSender.Player) _lastSendTime = Time.time;

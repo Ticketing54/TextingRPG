@@ -181,6 +181,8 @@ namespace TextingRPG.UI
 
                     if (ending)
                     {
+                        SaveSystem.ArchiveAsHistory(BuildSaveData(response.EndingTone));
+
                         _conversationEnded = true;
                         Debug.Log($"이야기 종료 — endingTone: '{response.EndingTone}'");
 
@@ -190,6 +192,10 @@ namespace TextingRPG.UI
 
                         OnConversationEnded?.Invoke();
                     }
+                    else
+                    {
+                        SaveSystem.SaveCurrent(BuildSaveData(""));
+                    }
                 },
                 onError: error =>
                 {
@@ -197,6 +203,21 @@ namespace TextingRPG.UI
                     OnError?.Invoke(error);
                 }
             );
+        }
+
+        private GameSaveData BuildSaveData(string endingTone)
+        {
+            return new GameSaveData
+            {
+                PlayerName = _playerName,
+                Outline = DataManager.Instance.GetStoryOutline(),
+                ImportantFacts = DataManager.Instance.GetImportantFacts(),
+                History = DataManager.Instance.GetConversationHistory(),
+                LastChoices = _lastChoices,
+                Tally = _tally,
+                EndingTone = endingTone ?? "",
+                SavedAtIso = DateTime.UtcNow.ToString("o")
+            };
         }
 
         // 플레이어 입력이 이야기와 무관할 때: 그 입력을 턴/히스토리에서 빼고, 짧은 안내와

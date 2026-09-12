@@ -1,12 +1,13 @@
 using TextingRPG.Core;
 using TextingRPG.LLM;
+using TextingRPG.Systems;
 using UnityEngine;
 
 namespace TextingRPG.UI
 {
     // ChatController <-> ChatBubbleListView 배선을 실제 Gemini API로 연결하는 부트스트랩.
     // API 키는 프로젝트 루트의 secrets.local.json(커밋 안 됨)에서 읽는다 (코드/에셋에 하드코딩 금지).
-    // 흐름: 메인 메뉴 → 키워드 선택 → 플레이어 이름 입력 → 스토리 생성.
+    // 흐름: 메인 메뉴 → 키워드 선택 → 플레이어 이름 입력 → 스토리 생성. (또는 메인 메뉴 → 히스토리 → 읽기 전용 재생)
     public class ChatBootstrap : MonoBehaviour
     {
         [SerializeField] ChatBubbleListView chatBubbleListView;
@@ -16,6 +17,7 @@ namespace TextingRPG.UI
         [SerializeField] MainMenuPanel mainMenuPanel;
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
         [SerializeField] PlayerNamePanel playerNamePanel;
+        [SerializeField] HistoryPanel historyPanel;
         [SerializeField] GameObject chatUIRoot;
 
         private ChatController _controller;
@@ -33,16 +35,51 @@ namespace TextingRPG.UI
             chatUIRoot.SetActive(false);
             keywordIntroPanel.gameObject.SetActive(false);
             playerNamePanel.gameObject.SetActive(false);
+            historyPanel.gameObject.SetActive(false);
 
             mainMenuPanel.OnNewGameClicked += HandleNewGameClicked;
+            mainMenuPanel.OnHistoryClicked += HandleHistoryClicked;
             keywordIntroPanel.OnKeywordsConfirmed += HandleKeywordsConfirmed;
             playerNamePanel.OnNameConfirmed += HandleNameConfirmed;
+            historyPanel.OnBackClicked += HandleHistoryBackClicked;
+            historyPanel.OnEntrySelected += HandleHistoryEntrySelected;
         }
 
         private void HandleNewGameClicked()
         {
             mainMenuPanel.gameObject.SetActive(false);
             keywordIntroPanel.gameObject.SetActive(true);
+        }
+
+        private void HandleHistoryClicked()
+        {
+            mainMenuPanel.gameObject.SetActive(false);
+            historyPanel.gameObject.SetActive(true);
+            historyPanel.Populate();
+        }
+
+        private void HandleHistoryBackClicked()
+        {
+            historyPanel.gameObject.SetActive(false);
+            mainMenuPanel.gameObject.SetActive(true);
+        }
+
+        private void HandleHistoryEntrySelected(string id)
+        {
+            var data = SaveSystem.LoadHistoryEntry(id);
+            if (data == null)
+            {
+                Debug.LogError($"히스토리 항목을 불러오지 못했다: {id}");
+                return;
+            }
+
+            historyPanel.gameObject.SetActive(false);
+
+            // LoadHistory는 활성 계층을 전제로 한다 (말풍선 Awake, 레이아웃 리빌드, 스크롤).
+            // 비활성 상태에서 먼저 부르면 말풍선이 Awake 없이 생성돼 NullReferenceException이 난다.
+            chatUIRoot.SetActive(true);
+            chatBubbleListView.LoadHistory(data.History);
+            chatInputView.DisableForReadOnly();
         }
 
         private void HandleKeywordsConfirmed(string[] keywords)
