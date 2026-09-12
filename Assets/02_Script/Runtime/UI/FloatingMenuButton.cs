@@ -11,6 +11,9 @@ namespace TextingRPG.UI
     // chatUIRoot의 자식으로 배치해서 채팅/히스토리 화면이 켜지고 꺼질 때 같이 뜨고 사라진다 —
     // ChatBootstrap 등 다른 스크립트는 이 컴포넌트를 몰라도 된다.
     //
+    // 스냅/펼침 방향 계산은 별도 static 클래스로 빼지 않고 이 안에 private 메서드로 둔다 — 자동
+    // 테스트 대신 Play 모드에서 직접 드래그해보며 확인한다.
+    //
     // 애니메이션은 RectTransform.DOAnchorPos/CanvasGroup.DOFade 같은 DOTween UI 모듈 shortcut 대신
     // DOTween.To(getter, setter, ...)로 직접 값을 트윈한다 — 이 프로젝트엔 그 UI 모듈이 없다
     // (ChatBubble.cs가 타이핑 애니메이션에 쓰는 것과 동일한 패턴).
@@ -82,9 +85,7 @@ namespace TextingRPG.UI
         public void OnEndDrag(PointerEventData eventData)
         {
             if (_expanded) return;
-            float buttonRadius = _rect.rect.width / 2f;
-            float targetX = FloatingMenuLayout.SnapTargetX(
-                _rect.anchoredPosition.x, _parentRect.rect.width, buttonRadius, edgeMargin);
+            float targetX = SnapTargetX(_rect.anchoredPosition.x);
 
             _snapTween?.Kill();
             _snapTween = DOTween.To(
@@ -107,7 +108,7 @@ namespace TextingRPG.UI
             _expanded = true;
             blocker.SetActive(true);
 
-            int dir = FloatingMenuLayout.ExpandDirectionSign(_rect.anchoredPosition.x);
+            int dir = ExpandDirectionSign(_rect.anchoredPosition.x);
             Vector2 basePos = _rect.anchoredPosition;
 
             _exitMoveTween?.Kill();
@@ -161,5 +162,18 @@ namespace TextingRPG.UI
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
+
+        // 드래그를 놓았을 때 스냅할 x좌표(부모 기준 anchoredPosition.x).
+        // 화면 중앙보다 왼쪽이면 왼쪽 가장자리로, 아니면(중앙 포함) 오른쪽 가장자리로.
+        private float SnapTargetX(float currentX)
+        {
+            float buttonRadius = _rect.rect.width / 2f;
+            float edgeX = _parentRect.rect.width / 2f - buttonRadius - edgeMargin;
+            return currentX < 0f ? -edgeX : edgeX;
+        }
+
+        // 펼칠 때 하위 버튼이 이동할 방향 부호.
+        // 화면 중앙보다 왼쪽이면 +1(오른쪽으로), 아니면(중앙 포함) -1(왼쪽으로) — 항상 화면 안쪽을 향한다.
+        private static int ExpandDirectionSign(float currentX) => currentX < 0f ? 1 : -1;
     }
 }
