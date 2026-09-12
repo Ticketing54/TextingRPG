@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using TextingRPG.Core;
 using TextingRPG.LLM;
 using TextingRPG.Systems;
@@ -15,6 +16,11 @@ namespace TextingRPG.UI
         private const int MaxTurns = 120;
         private const string OpeningKickoffMessage = "(모험이 시작된다.)";
 
+        // 선택지 태그 라벨 색 (TMP 리치텍스트 hex). 배경 보고 조정하기 쉽게 여기 모아둔다.
+        private const string SafeChoiceColor = "#2E9E5B";     // 초록
+        private const string RiskyChoiceColor = "#C88A1E";    // 진노랑/골드 — 순수 노랑은 밝은 배경에서 안 보임
+        private const string RecklessChoiceColor = "#D33A3A"; // 빨강
+
         private readonly ILLMProvider _provider;
         private readonly string _worldDescription;
         private readonly string _playerName;
@@ -22,7 +28,7 @@ namespace TextingRPG.UI
         private bool _conversationEnded;
         private bool _awaitingResponse;
         private List<Choice> _lastChoices = new List<Choice>();
-        private PlayerEvaluation.Tally _tally; // 플레이 스타일 집계 (엔딩 평가용)
+        private Tally _tally; // 플레이 스타일 집계 (엔딩 평가용)
 
         public event Action<ChatMessage> OnMessageAdded;
         public event Action<string> OnError;
@@ -31,6 +37,53 @@ namespace TextingRPG.UI
         // 위험한 선택으로 주사위 두 개를 굴렸을 때 발생. (굴림 결과, 결과 등급 라벨, 애니메이션이
         // 끝나면 호출해야 하는 콜백)을 전달한다. 구독자가 없으면 애니메이션 없이 즉시 진행한다.
         public event Action<DiceRollResult, string, Action> OnDiceRollRequested;
+
+        // 엔딩 시 플레이 스타일을 칭호 + 수치 한 줄로 요약한다. 코드 규칙 기반, API 호출 없음.
+        // 칭호·임계값은 아래 Epithet에서 바로 수정하면 된다. GameSaveData가 저장 타입으로도 쓴다.
+        public struct Tally
+        {
+            public int Safe, Risky, Reckless;
+            public int CritFail, Fail, Partial, Success, CritSuccess;
+
+            public void CountChoice(ChoiceRisk risk)
+            {
+                switch (risk)
+                {
+                    case ChoiceRisk.Risky: Risky++; break;
+                    case ChoiceRisk.Reckless: Reckless++; break;
+                    default: Safe++; break;
+                }
+            }
+
+            public void CountOutcome(DiceOutcome outcome)
+            {
+                switch (outcome)
+                {
+                    case DiceOutcome.CriticalFailure: CritFail++; break;
+                    case DiceOutcome.Failure: Fail++; break;
+                    case DiceOutcome.Partial: Partial++; break;
+                    case DiceOutcome.Success: Success++; break;
+                    case DiceOutcome.CriticalSuccess: CritSuccess++; break;
+                }
+            }
+
+            public string Epithet()
+            {
+                if (Reckless >= Risky && Reckless > Safe) return "무모한 돌격자";
+                if (Safe > Risky + Reckless) return "신중한 관찰자";
+                if (CritSuccess >= 3) return "운명의 총아";
+                if (CritFail >= 3) return "불운한 방랑자";
+                if (Risky >= Safe && Risky >= Reckless && Risky > 0) return "계산된 승부사";
+                return "즉흥적인 여행자";
+            }
+
+            // 엔딩 화면에 그대로 넣는 문자열. 가운데 정렬, 항목별 한 줄씩, 총평(칭호)은 맨 아래에 크게.
+            public string Summary() =>
+                "<align=center>━ 플레이어 평가 ━\n\n" +
+                $"안전 {Safe}\n위험 {Risky}\n무모 {Reckless}\n\n" +
+                $"대성공 {CritSuccess}\n대실패 {CritFail}\n\n" +
+                $"<size=160%><b>{Epithet()}</b></size></align>";
+        }
 
         public ChatController(ILLMProvider provider, string worldDescription, string playerName)
         {
@@ -70,7 +123,7 @@ namespace TextingRPG.UI
             if (_conversationEnded || _awaitingResponse) return;
 
             // 입력이 직전 턴 선택지의 번호면 그 선택지로 해석하고, 아니면 자유 입력으로 둔다.
-            int? choiceIndex = ChoiceInputParser.Parse(text, _lastChoices.Count);
+            int? choiceIndex = ParseChoiceInput(text, _lastChoices.Count);
             Choice selectedChoice = choiceIndex.HasValue ? _lastChoices[choiceIndex.Value] : null;
             string playerText = selectedChoice != null ? selectedChoice.Text : text;
 
@@ -171,9 +224,9 @@ namespace TextingRPG.UI
                     if (!ending && _lastChoices.Count > 0)
                     {
                         var choicesMessage = new ChatMessage(
-                            ChatSender.Narration, ChoiceListFormatter.Plain(_lastChoices), DateTime.UtcNow.ToString("o"))
+                            ChatSender.Narration, FormatChoicesPlain(_lastChoices), DateTime.UtcNow.ToString("o"))
                         {
-                            DisplayText = ChoiceListFormatter.Colored(_lastChoices)
+                            DisplayText = FormatChoicesColored(_lastChoices)
                         };
                         DataManager.Instance.AppendConversationMessage(choicesMessage);
                         OnMessageAdded?.Invoke(choicesMessage);
@@ -187,7 +240,7 @@ namespace TextingRPG.UI
                         Debug.Log($"이야기 종료 — endingTone: '{response.EndingTone}'");
 
                         var evalMessage = new ChatMessage(
-                            ChatSender.Narration, PlayerEvaluation.Summary(_tally), DateTime.UtcNow.ToString("o"));
+                            ChatSender.Narration, _tally.Summary(), DateTime.UtcNow.ToString("o"));
                         OnMessageAdded?.Invoke(evalMessage);
 
                         OnConversationEnded?.Invoke();
@@ -236,10 +289,61 @@ namespace TextingRPG.UI
             if (_lastChoices.Count > 0)
             {
                 OnMessageAdded?.Invoke(new ChatMessage(
-                    ChatSender.Narration, ChoiceListFormatter.Plain(_lastChoices), DateTime.UtcNow.ToString("o"))
+                    ChatSender.Narration, FormatChoicesPlain(_lastChoices), DateTime.UtcNow.ToString("o"))
                 {
-                    DisplayText = ChoiceListFormatter.Colored(_lastChoices)
+                    DisplayText = FormatChoicesColored(_lastChoices)
                 });
+            }
+        }
+
+        // 플레이어가 입력창에 친 텍스트가 선택지 번호인지(1~choiceCount) 판별한다.
+        // 선택지 번호면 0-based 인덱스를, 아니면 null(자유 입력)을 반환.
+        private static int? ParseChoiceInput(string text, int choiceCount)
+        {
+            if (choiceCount <= 0 || string.IsNullOrWhiteSpace(text)) return null;
+            if (!int.TryParse(text.Trim(), out int number)) return null;
+            if (number < 1 || number > choiceCount) return null;
+            return number - 1;
+        }
+
+        // 선택지 목록을 채팅에 보여줄 문자열로 만든다.
+        // Plain은 대화 히스토리/프롬프트에 저장하는 평문, Colored는 태그 라벨에만 색을 입힌 표시용.
+        private static string FormatChoicesPlain(IReadOnlyList<Choice> choices) => FormatChoiceList(choices, colored: false);
+
+        private static string FormatChoicesColored(IReadOnlyList<Choice> choices) => FormatChoiceList(choices, colored: true);
+
+        private static string FormatChoiceList(IReadOnlyList<Choice> choices, bool colored)
+        {
+            if (choices == null || choices.Count == 0) return "";
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < choices.Count; i++)
+            {
+                if (i > 0) sb.Append('\n');
+                var label = ChoiceTagLabel(choices[i].Risk);
+                if (colored) label = $"<color={ChoiceTagColor(choices[i].Risk)}>{label}</color>";
+                sb.Append($"{i + 1}. {label} {choices[i].Text}");
+            }
+            return sb.ToString();
+        }
+
+        private static string ChoiceTagLabel(ChoiceRisk risk)
+        {
+            switch (risk)
+            {
+                case ChoiceRisk.Risky: return "[위험]";
+                case ChoiceRisk.Reckless: return "[무모]";
+                default: return "[안전]";
+            }
+        }
+
+        private static string ChoiceTagColor(ChoiceRisk risk)
+        {
+            switch (risk)
+            {
+                case ChoiceRisk.Risky: return RiskyChoiceColor;
+                case ChoiceRisk.Reckless: return RecklessChoiceColor;
+                default: return SafeChoiceColor;
             }
         }
     }

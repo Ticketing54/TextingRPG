@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TextingRPG.Core;
 using TextingRPG.LLM;
+using TextingRPG.UI;
 
 namespace TextingRPG.Systems
 {
@@ -13,7 +14,7 @@ namespace TextingRPG.Systems
         public List<string> ImportantFacts = new List<string>();
         public List<ChatMessage> History = new List<ChatMessage>();
         public List<Choice> LastChoices = new List<Choice>();
-        public PlayerEvaluation.Tally Tally;
+        public ChatController.Tally Tally;
 
         // 진행 중이면 빈 문자열, 완료되면 "good"/"bad"/"bittersweet".
         public string EndingTone = "";
