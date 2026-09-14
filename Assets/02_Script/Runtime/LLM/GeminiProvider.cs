@@ -4,6 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using TextingRPG.Core;
+using TextingRPG.Systems;
 using UnityEngine.Networking;
 
 namespace TextingRPG.LLM
@@ -14,7 +15,7 @@ namespace TextingRPG.LLM
         // https://ai.google.dev/gemini-api/docs/structured-output 에서 responseSchema 형식을 확인할 것.
         private const string ApiUrlTemplate =
             "https://generativelanguage.googleapis.com/v1beta/models/{0}:generateContent";
-        private const int MaxOutputTokens = 512;
+        private const int MaxOutputTokens = 2048; // thinking 모델은 응답 전에 추론 토큰을 소비하므로 여유 있게 잡는다
 
         private readonly string _apiKey;
         private readonly string _model;
@@ -25,16 +26,11 @@ namespace TextingRPG.LLM
             _model = model;
         }
 
-        public void SendMessage(ConversationContext context, Action<LLMResponse> onSuccess, Action<string> onError)
-        {
-            SendMessageWithRetry(context, onSuccess, onError, retriesLeft: 1);
-        }
-
-        private void SendMessageWithRetry(
-            ConversationContext context, Action<LLMResponse> onSuccess, Action<string> onError, int retriesLeft)
+        public void GenerateStoryOutline(
+            ConversationContext context, Action<DataManager.StoryOutline, string> onSuccess, Action<string> onError)
         {
             var url = string.Format(ApiUrlTemplate, _model);
-            var bodyJson = BuildRequestBody(context);
+            var bodyJson = BuildStoryOutlineRequestBody(context);
             var bodyBytes = Encoding.UTF8.GetBytes(bodyJson);
 
             var request = new UnityWebRequest(url, "POST")
@@ -51,18 +47,12 @@ namespace TextingRPG.LLM
                 {
                     if (request.result != UnityWebRequest.Result.Success)
                     {
-                        if (retriesLeft > 0)
-                        {
-                            SendMessageWithRetry(context, onSuccess, onError, retriesLeft - 1);
-                            return;
-                        }
-
                         onError?.Invoke($"{request.responseCode}: {request.error} — {request.downloadHandler.text}");
                         return;
                     }
 
-                    var response = ParseResponse(request.downloadHandler.text);
-                    onSuccess?.Invoke(response);
+                    var (outline, openingNarration) = ParseStoryOutline(request.downloadHandler.text);
+                    onSuccess?.Invoke(outline, openingNarration);
                 }
                 catch (Exception e)
                 {
@@ -75,7 +65,7 @@ namespace TextingRPG.LLM
             };
         }
 
-        internal string BuildRequestBody(ConversationContext context)
+        internal string BuildStoryOutlineRequestBody(ConversationContext context)
         {
             var contents = new JArray();
             foreach (var message in context.History)
@@ -87,28 +77,22 @@ namespace TextingRPG.LLM
                 });
             }
 
-            var effectSchema = new JObject
-            {
-                ["type"] = "OBJECT",
-                ["properties"] = new JObject
-                {
-                    ["type"] = new JObject { ["type"] = "STRING", ["enum"] = new JArray("relationship", "stat") },
-                    ["target"] = new JObject { ["type"] = "STRING" },
-                    ["delta"] = new JObject { ["type"] = "NUMBER" }
-                },
-                ["required"] = new JArray("type", "target", "delta")
-            };
+            var stringArraySchema = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } };
 
             var responseSchema = new JObject
             {
                 ["type"] = "OBJECT",
                 ["properties"] = new JObject
                 {
-                    ["reply"] = new JObject { ["type"] = "STRING" },
-                    ["tags"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
-                    ["effects"] = new JObject { ["type"] = "ARRAY", ["items"] = effectSchema }
+                    ["title"] = new JObject { ["type"] = "STRING" },
+                    ["worldSetting"] = new JObject { ["type"] = "STRING" },
+                    ["centralConflict"] = new JObject { ["type"] = "STRING" },
+                    ["keyCharacters"] = stringArraySchema,
+                    ["keyEvents"] = stringArraySchema,
+                    ["finalGoal"] = new JObject { ["type"] = "STRING" },
+                    ["openingNarration"] = new JObject { ["type"] = "STRING" }
                 },
-                ["required"] = new JArray("reply", "tags", "effects")
+                ["required"] = new JArray("title", "worldSetting", "centralConflict", "keyCharacters", "keyEvents", "finalGoal", "openingNarration")
             };
 
             var body = new JObject
@@ -129,7 +113,7 @@ namespace TextingRPG.LLM
             return body.ToString(Formatting.None);
         }
 
-        public static LLMResponse ParseResponse(string rawJson)
+        public static (DataManager.StoryOutline Outline, string OpeningNarration) ParseStoryOutline(string rawJson)
         {
             var root = JObject.Parse(rawJson);
             var candidates = root["candidates"] as JArray;
@@ -144,35 +128,200 @@ namespace TextingRPG.LLM
             }
 
             var payload = JObject.Parse(text);
-            var response = new LLMResponse
+            var outline = new DataManager.StoryOutline
             {
-                Reply = (string)payload["reply"],
-                Tags = new List<string>(),
-                Effects = new List<LLMEffect>()
+                Title = (string)payload["title"],
+                WorldSetting = (string)payload["worldSetting"],
+                CentralConflict = (string)payload["centralConflict"],
+                FinalGoal = (string)payload["finalGoal"],
+                KeyCharacters = new List<string>(),
+                KeyEvents = new List<string>()
             };
 
-            if (payload["tags"] is JArray tagsToken)
+            if (payload["keyCharacters"] is JArray charactersToken)
             {
-                foreach (var tag in tagsToken)
-                {
-                    response.Tags.Add((string)tag);
-                }
+                foreach (var character in charactersToken) outline.KeyCharacters.Add((string)character);
             }
 
-            if (payload["effects"] is JArray effectsToken)
+            if (payload["keyEvents"] is JArray eventsToken)
             {
-                foreach (var effectToken in effectsToken)
+                foreach (var evt in eventsToken) outline.KeyEvents.Add((string)evt);
+            }
+
+            var openingNarration = (string)payload["openingNarration"] ?? "";
+
+            return (outline, openingNarration);
+        }
+
+        public void ContinueStory(ConversationContext context, Action<TurnResponse> onSuccess, Action<string> onError)
+        {
+            var url = string.Format(ApiUrlTemplate, _model);
+            var bodyJson = BuildTurnRequestBody(context);
+            var bodyBytes = Encoding.UTF8.GetBytes(bodyJson);
+
+            var request = new UnityWebRequest(url, "POST")
+            {
+                uploadHandler = new UploadHandlerRaw(bodyBytes),
+                downloadHandler = new DownloadHandlerBuffer()
+            };
+            request.SetRequestHeader("content-type", "application/json");
+            request.SetRequestHeader("x-goog-api-key", _apiKey);
+
+            request.SendWebRequest().completed += _ =>
+            {
+                try
                 {
-                    response.Effects.Add(new LLMEffect
+                    if (request.result != UnityWebRequest.Result.Success)
                     {
-                        Type = (string)effectToken["type"],
-                        Target = (string)effectToken["target"],
-                        Delta = (float)effectToken["delta"]
-                    });
+                        onError?.Invoke($"{request.responseCode}: {request.error} — {request.downloadHandler.text}");
+                        return;
+                    }
+
+                    var response = ParseTurnResponse(request.downloadHandler.text);
+                    onSuccess?.Invoke(response);
+                }
+                catch (Exception e)
+                {
+                    onError?.Invoke($"Failed to parse Gemini response: {e.Message}");
+                }
+                finally
+                {
+                    request.Dispose();
+                }
+            };
+        }
+
+        internal string BuildTurnRequestBody(ConversationContext context)
+        {
+            var contents = new JArray();
+            foreach (var message in context.History)
+            {
+                contents.Add(new JObject
+                {
+                    ["role"] = message.Sender == ChatSender.Player ? "user" : "model",
+                    ["parts"] = new JArray(new JObject { ["text"] = message.Text })
+                });
+            }
+
+            var choicesSchema = new JObject
+            {
+                ["type"] = "ARRAY",
+                ["items"] = new JObject
+                {
+                    ["type"] = "OBJECT",
+                    ["properties"] = new JObject
+                    {
+                        ["text"] = new JObject { ["type"] = "STRING" },
+                        ["risk"] = new JObject { ["type"] = "STRING", ["enum"] = new JArray("안전", "위험", "무모") }
+                    },
+                    ["required"] = new JArray("text", "risk")
+                }
+            };
+
+            var responseSchema = new JObject
+            {
+                ["type"] = "OBJECT",
+                ["properties"] = new JObject
+                {
+                    ["narration"] = new JObject { ["type"] = "STRING" },
+                    ["npcLine"] = new JObject { ["type"] = "STRING" },
+                    ["speakerName"] = new JObject { ["type"] = "STRING" },
+                    ["newFacts"] = new JObject { ["type"] = "ARRAY", ["items"] = new JObject { ["type"] = "STRING" } },
+                    ["choices"] = choicesSchema,
+                    ["isEnding"] = new JObject { ["type"] = "BOOLEAN" },
+                    ["endingTone"] = new JObject { ["type"] = "STRING" }, // "" / "good" / "bad" / "bittersweet" — 프롬프트에서 지정
+                    ["offTopic"] = new JObject { ["type"] = "BOOLEAN" }
+                },
+                ["required"] = new JArray("narration", "newFacts", "choices", "isEnding", "endingTone", "offTopic")
+            };
+
+            var body = new JObject
+            {
+                ["systemInstruction"] = new JObject
+                {
+                    ["parts"] = new JArray(new JObject { ["text"] = context.SystemPrompt })
+                },
+                ["contents"] = contents,
+                ["generationConfig"] = new JObject
+                {
+                    ["responseMimeType"] = "application/json",
+                    ["responseSchema"] = responseSchema,
+                    ["maxOutputTokens"] = MaxOutputTokens
+                }
+            };
+
+            return body.ToString(Formatting.None);
+        }
+
+        public static TurnResponse ParseTurnResponse(string rawJson)
+        {
+            var root = JObject.Parse(rawJson);
+            var candidates = root["candidates"] as JArray;
+            var parts = candidates != null && candidates.Count > 0
+                ? candidates[0]["content"]?["parts"] as JArray
+                : null;
+            var text = parts != null && parts.Count > 0 ? (string)parts[0]["text"] : null;
+
+            if (string.IsNullOrEmpty(text))
+            {
+                throw new Exception("No text part found in Gemini response.");
+            }
+
+            var payload = JObject.Parse(text);
+            var response = new TurnResponse
+            {
+                Narration = (string)payload["narration"],
+                NpcLine = (string)payload["npcLine"] ?? "",
+                SpeakerName = (string)payload["speakerName"] ?? "",
+                IsEnding = (bool?)payload["isEnding"] ?? false,
+                IsOffTopic = (bool?)payload["offTopic"] ?? false,
+                EndingTone = (string)payload["endingTone"] ?? "",
+                NewFacts = new List<string>()
+            };
+
+            if (payload["newFacts"] is JArray factsToken)
+            {
+                foreach (var fact in factsToken) response.NewFacts.Add((string)fact);
+            }
+
+            if (payload["choices"] is JArray choicesToken)
+            {
+                foreach (var choiceToken in choicesToken)
+                {
+                    var choiceText = (string)choiceToken["text"];
+                    if (string.IsNullOrEmpty(choiceText)) continue;
+                    // LLM이 이전 턴 선택지 형식("1. [위험] …")을 흉내 내 text 앞에 태그를 붙이는 경우가 있어 걷어낸다.
+                    choiceText = StripLeadingRiskTag(choiceText);
+                    if (string.IsNullOrEmpty(choiceText)) continue;
+                    var risk = ParseRisk((string)choiceToken["risk"]);
+                    response.Choices.Add(new Choice(choiceText, risk));
                 }
             }
 
             return response;
+        }
+
+        private static readonly string[] RiskTagPrefixes = { "[안전]", "[위험]", "[무모]" };
+
+        private static string StripLeadingRiskTag(string text)
+        {
+            var trimmed = text.TrimStart();
+            foreach (var tag in RiskTagPrefixes)
+            {
+                if (trimmed.StartsWith(tag))
+                    return trimmed.Substring(tag.Length).TrimStart();
+            }
+            return text;
+        }
+
+        private static ChoiceRisk ParseRisk(string risk)
+        {
+            switch (risk)
+            {
+                case "위험": return ChoiceRisk.Risky;
+                case "무모": return ChoiceRisk.Reckless;
+                default: return ChoiceRisk.Safe;
+            }
         }
     }
 }

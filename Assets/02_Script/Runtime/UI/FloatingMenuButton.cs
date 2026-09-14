@@ -1,0 +1,188 @@
+using DG.Tweening;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+namespace TextingRPG.UI
+{
+    // 아이폰 AssistiveTouch 스타일 원형 메뉴 버튼. 자기 자신의 RectTransform을 드래그해서 화면 좌/우로
+    // 옮길 수 있고(놓으면 가까운 가장자리에 스냅), 탭하면 나가기/설정 버튼이 화면 안쪽 방향으로 펼쳐진다.
+    // chatUIRoot의 자식으로 배치해서 채팅/히스토리 화면이 켜지고 꺼질 때 같이 뜨고 사라진다 —
+    // ChatBootstrap 등 다른 스크립트는 이 컴포넌트를 몰라도 된다.
+    //
+    // 스냅/펼침 방향 계산은 별도 static 클래스로 빼지 않고 이 안에 private 메서드로 둔다 — 자동
+    // 테스트 대신 Play 모드에서 직접 드래그해보며 확인한다.
+    //
+    // 애니메이션은 RectTransform.DOAnchorPos/CanvasGroup.DOFade 같은 DOTween UI 모듈 shortcut 대신
+    // DOTween.To(getter, setter, ...)로 직접 값을 트윈한다 — 이 프로젝트엔 그 UI 모듈이 없다
+    // (ChatBubble.cs가 타이핑 애니메이션에 쓰는 것과 동일한 패턴).
+    public class FloatingMenuButton : MonoBehaviour,
+        IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
+    {
+        [SerializeField] Button exitButton;
+        [SerializeField] Button settingsButton;
+        [SerializeField] GameObject settingsPanel; // ChatUI 밑에 SettingsPanel과 같은 레벨(형제)에 있는 설정 화면
+        [SerializeField] GameObject blocker;       // 펼쳤을 때만 활성화되는 전체화면 투명 차단막
+        [SerializeField] Button blockerButton;
+        [SerializeField] float edgeMargin = 16f;
+        [SerializeField] float expandSpacing = 100f;
+        [SerializeField] float snapDuration = 0.25f;
+        [SerializeField] float expandDuration = 0.2f;
+        [SerializeField] float expandStagger = 0.06f;
+
+        private RectTransform _rect;
+        private RectTransform _parentRect;
+        private Canvas _canvas;
+        private RectTransform _exitRect;
+        private CanvasGroup _exitGroup;
+        private RectTransform _settingsRect;
+        private CanvasGroup _settingsGroup;
+        private bool _expanded;
+
+        private Tween _snapTween;
+        private Tween _exitMoveTween;
+        private Tween _exitFadeTween;
+        private Tween _settingsMoveTween;
+        private Tween _settingsFadeTween;
+
+        private void Awake()
+        {
+            _rect = (RectTransform)transform;
+            _parentRect = (RectTransform)transform.parent;
+            _canvas = GetComponentInParent<Canvas>();
+
+            _exitRect = exitButton.GetComponent<RectTransform>();
+            _exitGroup = exitButton.GetComponent<CanvasGroup>();
+            _settingsRect = settingsButton.GetComponent<RectTransform>();
+            _settingsGroup = settingsButton.GetComponent<CanvasGroup>();
+
+            HideSubButtonInstantly(_exitGroup);
+            HideSubButtonInstantly(_settingsGroup);
+            blocker.SetActive(false);
+
+            exitButton.onClick.AddListener(ExitToMainMenu);
+            settingsButton.onClick.AddListener(OpenSettings);
+            blockerButton.onClick.AddListener(Collapse);
+        }
+
+        private static void HideSubButtonInstantly(CanvasGroup group)
+        {
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+        }
+
+        // IBeginDragHandler가 있어야 Unity EventSystem이 이 오브젝트에 드래그를 시작하고
+        // OnDrag/OnEndDrag를 계속 보내준다. 실제 처리는 OnDrag/OnEndDrag에서 한다.
+        public void OnBeginDrag(PointerEventData eventData) { }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (_expanded) return; // 펼쳐진 동안은 드래그로 옮길 수 없다 (AssistiveTouch와 동일)
+            float scale = _canvas != null ? _canvas.scaleFactor : 1f;
+            _rect.anchoredPosition += eventData.delta / scale;
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (_expanded) return;
+            float targetX = SnapTargetX(_rect.anchoredPosition.x);
+
+            _snapTween?.Kill();
+            _snapTween = DOTween.To(
+                    () => _rect.anchoredPosition.x,
+                    x => _rect.anchoredPosition = new Vector2(x, _rect.anchoredPosition.y),
+                    targetX, snapDuration)
+                .SetEase(Ease.OutBack);
+        }
+
+        // 실제로 드래그가 일어나면(EventSystem이 dragging으로 판단) 이 콜백은 호출되지 않으므로
+        // 별도 임계값 로직 없이 탭/드래그가 자연히 구분된다.
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (_expanded) Collapse();
+            else Expand();
+        }
+
+        private void Expand()
+        {
+            _expanded = true;
+            blocker.SetActive(true);
+
+            int dir = ExpandDirectionSign(_rect.anchoredPosition.x);
+            Vector2 basePos = _rect.anchoredPosition;
+
+            _exitMoveTween?.Kill();
+            _exitFadeTween?.Kill();
+            _settingsMoveTween?.Kill();
+            _settingsFadeTween?.Kill();
+
+            _exitRect.anchoredPosition = basePos;
+            _settingsRect.anchoredPosition = basePos;
+            _exitGroup.blocksRaycasts = true;
+            _settingsGroup.blocksRaycasts = true;
+
+            var exitTarget = basePos + new Vector2(dir * expandSpacing, 0f);
+            _exitMoveTween = DOTween.To(() => _exitRect.anchoredPosition, v => _exitRect.anchoredPosition = v, exitTarget, expandDuration)
+                .SetEase(Ease.OutBack);
+            _exitFadeTween = DOTween.To(() => _exitGroup.alpha, v => _exitGroup.alpha = v, 1f, expandDuration);
+
+            var settingsTarget = basePos + new Vector2(dir * expandSpacing * 2f, 0f);
+            _settingsMoveTween = DOTween.To(() => _settingsRect.anchoredPosition, v => _settingsRect.anchoredPosition = v, settingsTarget, expandDuration)
+                .SetEase(Ease.OutBack).SetDelay(expandStagger);
+            _settingsFadeTween = DOTween.To(() => _settingsGroup.alpha, v => _settingsGroup.alpha = v, 1f, expandDuration)
+                .SetDelay(expandStagger);
+        }
+
+        private void Collapse()
+        {
+            _expanded = false;
+            Vector2 basePos = _rect.anchoredPosition;
+
+            _exitMoveTween?.Kill();
+            _exitFadeTween?.Kill();
+            _settingsMoveTween?.Kill();
+            _settingsFadeTween?.Kill();
+
+            _exitMoveTween = DOTween.To(() => _exitRect.anchoredPosition, v => _exitRect.anchoredPosition = v, basePos, expandDuration)
+                .SetEase(Ease.InBack);
+            _exitFadeTween = DOTween.To(() => _exitGroup.alpha, v => _exitGroup.alpha = v, 0f, expandDuration)
+                .OnComplete(() => _exitGroup.blocksRaycasts = false);
+
+            _settingsMoveTween = DOTween.To(() => _settingsRect.anchoredPosition, v => _settingsRect.anchoredPosition = v, basePos, expandDuration)
+                .SetEase(Ease.InBack);
+            _settingsFadeTween = DOTween.To(() => _settingsGroup.alpha, v => _settingsGroup.alpha = v, 0f, expandDuration)
+                .OnComplete(() =>
+                {
+                    _settingsGroup.blocksRaycasts = false;
+                    blocker.SetActive(false);
+                });
+        }
+
+        private void ExitToMainMenu()
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        // 설정 화면은 지금 화면을 끄지 않고 그 위를 덮는 오버레이라, 펼친 메뉴부터 접어서
+        // 뒤에 반쯤 펼쳐진 상태로 남지 않게 한다.
+        private void OpenSettings()
+        {
+            Collapse();
+            settingsPanel.SetActive(true);
+        }
+
+        // 드래그를 놓았을 때 스냅할 x좌표(부모 기준 anchoredPosition.x).
+        // 화면 중앙보다 왼쪽이면 왼쪽 가장자리로, 아니면(중앙 포함) 오른쪽 가장자리로.
+        private float SnapTargetX(float currentX)
+        {
+            float buttonRadius = _rect.rect.width / 2f;
+            float edgeX = _parentRect.rect.width / 2f - buttonRadius - edgeMargin;
+            return currentX < 0f ? -edgeX : edgeX;
+        }
+
+        // 펼칠 때 하위 버튼이 이동할 방향 부호.
+        // 화면 중앙보다 왼쪽이면 +1(오른쪽으로), 아니면(중앙 포함) -1(왼쪽으로) — 항상 화면 안쪽을 향한다.
+        private static int ExpandDirectionSign(float currentX) => currentX < 0f ? 1 : -1;
+    }
+}
