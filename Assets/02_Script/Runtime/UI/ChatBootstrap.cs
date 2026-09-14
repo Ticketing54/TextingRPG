@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using TextingRPG.Core;
 using TextingRPG.LLM;
@@ -48,7 +49,7 @@ namespace TextingRPG.UI
             historyPanel.OnBackClicked += HandleHistoryBackClicked;
             historyPanel.OnEntrySelected += HandleHistoryEntrySelected;
 
-            FadeIn(mainMenuPanelGroup);
+            FadeIn(mainMenuPanelGroup, () => mainMenuPanel.PlayIntroAnimation());
         }
 
         private void HandleNewGameClicked()
@@ -127,12 +128,17 @@ namespace TextingRPG.UI
         }
 
         // 새 화면을 투명에서 불투명으로 서서히 드러낸다. 끝나기 전엔 클릭을 막아서
-        // 다 나타나기 전에 버튼이 눌리는 걸 방지한다.
-        private void FadeIn(CanvasGroup group, float duration = 0.4f)
+        // 다 나타나기 전에 버튼이 눌리는 걸 방지한다. onComplete는 페이드가 끝난 뒤 한 번 더 실행할
+        // 후속 동작(예: 메인 메뉴 인트로 애니메이션 시작)을 위한 선택적 콜백이다.
+        private void FadeIn(CanvasGroup group, Action onComplete = null, float duration = 0.4f)
         {
             group.blocksRaycasts = false;
             DOTween.To(() => group.alpha, v => group.alpha = v, 1f, duration)
-                .OnComplete(() => group.blocksRaycasts = true);
+                .OnComplete(() =>
+                {
+                    group.blocksRaycasts = true;
+                    onComplete?.Invoke();
+                });
         }
     }
 }
