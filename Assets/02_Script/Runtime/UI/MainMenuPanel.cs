@@ -48,7 +48,6 @@ namespace TextingRPG.UI
             };
 
             _fullTitle = titleLabel.text;
-            titleLabel.text = "";
             titleLabel.maxVisibleCharacters = 0;
 
             foreach (var group in _buttonGroupsInRevealOrder)
