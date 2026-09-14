@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TextingRPG.Core;
 using TextingRPG.LLM;
 using TextingRPG.Systems;
@@ -15,10 +16,12 @@ namespace TextingRPG.UI
         [SerializeField] DiceRollOverlayView diceRollOverlayView;
         [SerializeField] string geminiModel = "gemini-3.5-flash-lite"; // thinking 토큰 없이 응답하고, 3.6보다 무료 한도가 넉넉함
         [SerializeField] MainMenuPanel mainMenuPanel;
+        [SerializeField] CanvasGroup mainMenuPanelGroup;
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
         [SerializeField] PlayerNamePanel playerNamePanel;
         [SerializeField] HistoryPanel historyPanel;
         [SerializeField] GameObject chatUIRoot;
+        [SerializeField] CanvasGroup chatUIRootGroup;
 
         private ChatController _controller;
         private string _apiKey;
@@ -36,6 +39,7 @@ namespace TextingRPG.UI
             keywordIntroPanel.gameObject.SetActive(false);
             playerNamePanel.gameObject.SetActive(false);
             historyPanel.gameObject.SetActive(false);
+            mainMenuPanelGroup.alpha = 0f;
 
             mainMenuPanel.OnNewGameClicked += HandleNewGameClicked;
             mainMenuPanel.OnHistoryClicked += HandleHistoryClicked;
@@ -43,6 +47,8 @@ namespace TextingRPG.UI
             playerNamePanel.OnNameConfirmed += HandleNameConfirmed;
             historyPanel.OnBackClicked += HandleHistoryBackClicked;
             historyPanel.OnEntrySelected += HandleHistoryEntrySelected;
+
+            FadeIn(mainMenuPanelGroup);
         }
 
         private void HandleNewGameClicked()
@@ -102,6 +108,9 @@ namespace TextingRPG.UI
             diceRollOverlayView.Bind(_controller);
 
             chatUIRoot.SetActive(true);
+            chatUIRootGroup.alpha = 0f;
+            FadeIn(chatUIRootGroup);
+
             _controller.BeginAdventure();
         }
 
@@ -115,6 +124,15 @@ namespace TextingRPG.UI
         {
             Debug.Log("이야기가 종료되었습니다.");
             chatBubbleListView.Lock();
+        }
+
+        // 새 화면을 투명에서 불투명으로 서서히 드러낸다. 끝나기 전엔 클릭을 막아서
+        // 다 나타나기 전에 버튼이 눌리는 걸 방지한다.
+        private void FadeIn(CanvasGroup group, float duration = 0.4f)
+        {
+            group.blocksRaycasts = false;
+            DOTween.To(() => group.alpha, v => group.alpha = v, 1f, duration)
+                .OnComplete(() => group.blocksRaycasts = true);
         }
     }
 }
