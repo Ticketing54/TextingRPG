@@ -22,6 +22,7 @@ namespace TextingRPG.UI
     {
         [SerializeField] Button exitButton;
         [SerializeField] Button settingsButton;
+        [SerializeField] GameObject settingsPanel; // ChatUI 밑에 SettingsPanel과 같은 레벨(형제)에 있는 설정 화면
         [SerializeField] GameObject blocker;       // 펼쳤을 때만 활성화되는 전체화면 투명 차단막
         [SerializeField] Button blockerButton;
         [SerializeField] float edgeMargin = 16f;
@@ -58,10 +59,10 @@ namespace TextingRPG.UI
 
             HideSubButtonInstantly(_exitGroup);
             HideSubButtonInstantly(_settingsGroup);
-            settingsButton.interactable = false; // 자리표시자 — 아직 기능 없음
             blocker.SetActive(false);
 
             exitButton.onClick.AddListener(ExitToMainMenu);
+            settingsButton.onClick.AddListener(OpenSettings);
             blockerButton.onClick.AddListener(Collapse);
         }
 
@@ -161,6 +162,14 @@ namespace TextingRPG.UI
         private void ExitToMainMenu()
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        // 설정 화면은 지금 화면을 끄지 않고 그 위를 덮는 오버레이라, 펼친 메뉴부터 접어서
+        // 뒤에 반쯤 펼쳐진 상태로 남지 않게 한다.
+        private void OpenSettings()
+        {
+            Collapse();
+            settingsPanel.SetActive(true);
         }
 
         // 드래그를 놓았을 때 스냅할 x좌표(부모 기준 anchoredPosition.x).

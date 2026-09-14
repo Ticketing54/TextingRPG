@@ -1,5 +1,4 @@
 using System;
-using DG.Tweening;
 using TextingRPG.Core;
 using TMPro;
 using UnityEngine;
@@ -26,14 +25,16 @@ namespace TextingRPG.UI
         public ChatBubbleState State { get; private set; } = ChatBubbleState.Idle;
         public event Action OnPlayComplete;
 
+        // 매 프레임 이 값을 다시 읽으면서 진행하므로(Update 참고), 타이핑 도중에 값을 바꾸면
+        // 그 다음 프레임부터 바로 반영된다 — 설정 화면의 타이핑 속도 슬라이더가 이걸 이용한다.
         public float CharsPerSecond
         {
             get => charsPerSecond;
             set => charsPerSecond = value;
         }
 
-        private Tween _typingTween;
         private string _fullText;
+        private float _revealedChars;
         private VerticalLayoutGroup _bubbleLayoutGroup;
 
         private void Awake()
@@ -46,7 +47,6 @@ namespace TextingRPG.UI
             verticalLayoutGroup.childAlignment = AlignmentFor(sender);
             ResizeBubbleWidth(text);
             ApplySenderName(sender, senderName);
-            _typingTween?.Kill();
 
             if (sender == ChatSender.Player)
             {
@@ -62,7 +62,6 @@ namespace TextingRPG.UI
         public void Skip()
         {
             if (State != ChatBubbleState.Typing) return;
-            _typingTween?.Kill();
             textMeshProUGUI_text.maxVisibleCharacters = _fullText.Length;
             SetState(ChatBubbleState.Completed);
         }
@@ -109,16 +108,28 @@ namespace TextingRPG.UI
         private void StartTyping(string text)
         {
             _fullText = text;
+            _revealedChars = 0f;
             SetState(ChatBubbleState.Typing);
             textMeshProUGUI_text.text = text;
             textMeshProUGUI_text.maxVisibleCharacters = 0;
+        }
 
-            int revealed = 0;
-            float duration = Mathf.Max(0.01f, text.Length / charsPerSecond);
-            _typingTween = DOTween.To(() => revealed, v => revealed = v, text.Length, duration)
-                .SetEase(Ease.Linear)
-                .OnUpdate(() => textMeshProUGUI_text.maxVisibleCharacters = revealed)
-                .OnComplete(() => SetState(ChatBubbleState.Completed));
+        private void Update()
+        {
+            if (State != ChatBubbleState.Typing) return;
+
+            float rate = Mathf.Max(0.01f, charsPerSecond); // 0/음수로 인해 영원히 안 끝나는 걸 방지
+            _revealedChars += rate * Time.deltaTime;
+
+            if (_revealedChars >= _fullText.Length)
+            {
+                textMeshProUGUI_text.maxVisibleCharacters = _fullText.Length;
+                SetState(ChatBubbleState.Completed);
+            }
+            else
+            {
+                textMeshProUGUI_text.maxVisibleCharacters = Mathf.FloorToInt(_revealedChars);
+            }
         }
 
         private void SetState(ChatBubbleState state)

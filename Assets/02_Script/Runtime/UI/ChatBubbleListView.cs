@@ -43,6 +43,14 @@ namespace TextingRPG.UI
             _controller.OnMessageAdded += Enqueue;
         }
 
+        // 설정 화면의 타이핑 속도 슬라이더가 실시간으로 부른다. 이후 재생될 말풍선뿐 아니라
+        // 지금 타이핑 중인 말풍선에도 즉시 반영된다(ChatBubble이 매 프레임 속도를 다시 읽으므로).
+        public void SetTypingSpeed(float charsPerSecond)
+        {
+            typingCharsPerSecondOverride = charsPerSecond;
+            if (_current != null) _current.CharsPerSecond = charsPerSecond;
+        }
+
         private void OnDestroy()
         {
             if (_controller != null) _controller.OnMessageAdded -= Enqueue;

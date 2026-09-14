@@ -24,6 +24,7 @@ namespace TextingRPG.UI
 
         public event Action OnNewGameClicked;
         public event Action OnHistoryClicked;
+        public event Action OnSettingsClicked;
 
         private string _fullTitle;
         private CanvasGroup[] _buttonGroupsInRevealOrder;
@@ -32,11 +33,11 @@ namespace TextingRPG.UI
         {
             newGameButton.onClick.AddListener(() => OnNewGameClicked?.Invoke());
             historyButton.onClick.AddListener(() => OnHistoryClicked?.Invoke());
+            settingsButton.onClick.AddListener(() => OnSettingsClicked?.Invoke());
             quitButton.onClick.AddListener(Quit);
 
-            // 이어하기는 실제 재개 로직이 붙기 전까지, 설정은 조절할 항목이 생기기 전까지 비활성.
+            // 이어하기는 실제 재개 로직이 붙기 전까지 비활성.
             continueButton.interactable = false;
-            settingsButton.interactable = false;
 
             _buttonGroupsInRevealOrder = new[]
             {

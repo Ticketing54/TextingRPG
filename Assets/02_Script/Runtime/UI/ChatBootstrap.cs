@@ -21,6 +21,7 @@ namespace TextingRPG.UI
         [SerializeField] KeywordIntroPanel keywordIntroPanel;
         [SerializeField] PlayerNamePanel playerNamePanel;
         [SerializeField] HistoryPanel historyPanel;
+        [SerializeField] SettingsPanel settingsPanel;
         [SerializeField] GameObject chatUIRoot;
         [SerializeField] CanvasGroup chatUIRootGroup;
 
@@ -40,14 +41,18 @@ namespace TextingRPG.UI
             keywordIntroPanel.gameObject.SetActive(false);
             playerNamePanel.gameObject.SetActive(false);
             historyPanel.gameObject.SetActive(false);
+            settingsPanel.gameObject.SetActive(false);
             mainMenuPanelGroup.alpha = 0f;
 
             mainMenuPanel.OnNewGameClicked += HandleNewGameClicked;
             mainMenuPanel.OnHistoryClicked += HandleHistoryClicked;
+            mainMenuPanel.OnSettingsClicked += HandleSettingsClicked;
             keywordIntroPanel.OnKeywordsConfirmed += HandleKeywordsConfirmed;
             playerNamePanel.OnNameConfirmed += HandleNameConfirmed;
             historyPanel.OnBackClicked += HandleHistoryBackClicked;
             historyPanel.OnEntrySelected += HandleHistoryEntrySelected;
+            settingsPanel.OnBackClicked += HandleSettingsBackClicked;
+            settingsPanel.OnTypingSpeedChanged += chatBubbleListView.SetTypingSpeed;
 
             FadeIn(mainMenuPanelGroup, () => mainMenuPanel.PlayIntroAnimation());
         }
@@ -69,6 +74,18 @@ namespace TextingRPG.UI
         {
             historyPanel.gameObject.SetActive(false);
             mainMenuPanel.gameObject.SetActive(true);
+        }
+
+        // 설정 화면은 뒤 화면을 끄지 않고 그 위를 덮는 오버레이다 — FloatingMenuButton이 게임 중에
+        // 여는 경우에도 같은 방식으로 동작해야 해서, 여기서도 "뒤로 = 그냥 닫기"로 맞춘다.
+        private void HandleSettingsClicked()
+        {
+            settingsPanel.gameObject.SetActive(true);
+        }
+
+        private void HandleSettingsBackClicked()
+        {
+            settingsPanel.gameObject.SetActive(false);
         }
 
         private void HandleHistoryEntrySelected(string id)
