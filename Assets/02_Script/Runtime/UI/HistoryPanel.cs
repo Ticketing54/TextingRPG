@@ -44,6 +44,8 @@ namespace TextingRPG.UI
                 var id = entry.Id;
                 button.onClick.AddListener(() => OnEntrySelected?.Invoke(id));
             }
+
+            AudioManager.Instance?.RegisterHoverSounds();
         }
 
         private static string FormatEntry(HistoryEntry entry)

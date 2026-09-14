@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TextingRPG.Core;
+using TextingRPG.Systems;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,8 @@ namespace TextingRPG.UI
                 button.GetComponentInChildren<TMP_Text>().text = keyword;
                 button.onClick.AddListener(() => ToggleKeyword(keyword, button));
             }
+
+            AudioManager.Instance?.RegisterHoverSounds();
 
             startButton.onClick.AddListener(ConfirmSelection);
             startButton.interactable = false;
